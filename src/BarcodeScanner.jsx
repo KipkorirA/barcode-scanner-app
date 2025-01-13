@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import QRScanner from 'react-qr-scanner';
+import { useState, useEffect, useRef } from 'react';
+import Quagga from 'quagga';
 import { Circles } from 'react-loader-spinner';
 
 const BarcodeScanner = () => {
@@ -7,6 +7,7 @@ const BarcodeScanner = () => {
   const [productDetails, setProductDetails] = useState(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const scannerRef = useRef(null);  // Reference for the video container
 
   // Access environment variables
   const API_BASE_URL = import.meta.env.VITE_APP_API_BASE_URL;
@@ -49,6 +50,54 @@ const BarcodeScanner = () => {
     }
   }, [barcode]);
 
+  const startScanner = () => {
+    Quagga.init(
+      {
+        inputStream: {
+          name: "Live",
+          type: "LiveStream",
+          target: scannerRef.current, // Video stream target
+          constraints: {
+            facingMode: "environment", // Use the back camera
+          },
+        },
+        decoder: {
+          readers: [
+            "code_128_reader", 
+            "ean_reader", 
+            "ean_8_reader", 
+            "upc_reader", 
+            "upc_e_reader", 
+            "code_39_reader", 
+            "codabar_reader", 
+            "i2of5_reader"
+          ], // Supported barcode formats
+        },
+      },
+      (err) => {
+        if (err) {
+          console.error('Quagga init failed:', err);
+          setError('Failed to initialize scanner.');
+          return;
+        }
+        Quagga.start();
+      }
+    );
+
+    Quagga.onDetected((data) => {
+      setBarcode(data.codeResult.code);
+      Quagga.stop(); // Stop the scanner after barcode is detected
+    });
+  };
+
+  useEffect(() => {
+    startScanner();
+
+    return () => {
+      Quagga.stop();  // Clean up when component unmounts
+    };
+  }, []);
+
   const handleScan = (data) => {
     if (data && data.trim() !== '') {
       setBarcode(data);
@@ -58,29 +107,18 @@ const BarcodeScanner = () => {
   };
 
   const handleError = (err) => {
-    console.error('QR Scanner Error:', err);
+    console.error('Scanner Error:', err);
     setError('Scanner error. Please try again.');
-  };
-
-  const previewStyle = {
-    height: 300,
-    width: '100%',
   };
 
   return (
     <div className="scanner-container">
       <h1>Barcode Scanner</h1>
-      <QRScanner
-        delay={300}
-        style={previewStyle}
-        onError={handleError}
-        onScan={handleScan}
-        constraints={{
-          video: {
-            facingMode: 'environment', // Use the back camera
-          },
-        }}
-      />
+      <div
+        ref={scannerRef}
+        style={{ width: '100%', height: '300px', border: '1px solid black' }}
+      ></div>
+
       {isLoading ? (
         <div style={{ textAlign: 'center' }}>
           <Circles color="#00BFFF" height={80} width={80} />
