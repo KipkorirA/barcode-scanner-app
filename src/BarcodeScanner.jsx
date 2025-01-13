@@ -126,7 +126,11 @@ const BarcodeScanner = () => {
             <p><strong>Branch:</strong> {productDetails['Branch'] || 'N/A'}</p>
             <p><strong>Department:</strong> {productDetails['Department'] || 'N/A'}</p>
             <p><strong>Specific Room:</strong> {productDetails['Specific room'] || 'N/A'}</p>
-            <p><strong>Field 8:</strong> {productDetails['Field 8'] || 'N/A'}</p>
+            <p><strong>Main or Aux:</strong> {productDetails['Main or Aux'] || 'N/A'}</p>
+            <p><strong>Number:</strong> {productDetails['Number'] || 'N/A'}</p>
+            <p><strong>Condition:</strong> {productDetails['Condition'] || 'N/A'}</p>
+            <p><strong>Status:</strong> {productDetails['Status'] || 'N/A'}</p>
+            <p><strong>Tagging Condition:</strong> {productDetails['Tagging Condition'] || 'N/A'}</p>
           </div>
         ) : (
           <p>No product found for this barcode.</p>
