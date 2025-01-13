@@ -15,10 +15,12 @@ const BarcodeScanner = () => {
   const BASE_ID = import.meta.env.VITE_APP_BASE_ID;
   const TABLE_NAME = import.meta.env.VITE_APP_TABLE_NAME;
 
+  // Fetch product details by matching barcode in Airtable's BARCODE column
   const fetchProductDetails = async (barcodeValue) => {
     setIsLoading(true);
     setError(null);
 
+    // Construct the Airtable API URL with filterByFormula to search for the BARCODE column
     const url = `${API_BASE_URL}/${BASE_ID}/${TABLE_NAME}?filterByFormula=({BARCODE}="${barcodeValue}")`;
 
     try {
@@ -31,9 +33,10 @@ const BarcodeScanner = () => {
       const data = await response.json();
 
       if (data.records.length > 0) {
+        // Successfully found the record, set product details
         setProductDetails(data.records[0].fields);
       } else {
-        setProductDetails(null);
+        setProductDetails(null); // No matching barcode found
       }
     } catch (error) {
       console.error('Error fetching product details:', error);
@@ -44,12 +47,14 @@ const BarcodeScanner = () => {
   };
 
   useEffect(() => {
+    // Trigger fetch when the barcode is updated
     if (barcode) {
       const timeout = setTimeout(() => fetchProductDetails(barcode), 500);
-      return () => clearTimeout(timeout);
+      return () => clearTimeout(timeout); // Cleanup on barcode change
     }
   }, [barcode]);
 
+  // Start Quagga barcode scanner
   const startScanner = () => {
     Quagga.init(
       {
@@ -85,31 +90,18 @@ const BarcodeScanner = () => {
     );
 
     Quagga.onDetected((data) => {
-      setBarcode(data.codeResult.code);
-      Quagga.stop(); // Stop the scanner after barcode is detected
+      setBarcode(data.codeResult.code); // Set scanned barcode value
+      Quagga.stop(); // Stop scanner after barcode detection
     });
   };
 
   useEffect(() => {
-    startScanner();
+    startScanner(); // Start scanner when component mounts
 
     return () => {
       Quagga.stop();  // Clean up when component unmounts
     };
   }, []);
-
-  const handleScan = (data) => {
-    if (data && data.trim() !== '') {
-      setBarcode(data);
-    } else {
-      setError('Invalid barcode detected.');
-    }
-  };
-
-  const handleError = (err) => {
-    console.error('Scanner Error:', err);
-    setError('Scanner error. Please try again.');
-  };
 
   return (
     <div className="scanner-container">
@@ -134,6 +126,7 @@ const BarcodeScanner = () => {
             <p><strong>Branch:</strong> {productDetails['Branch'] || 'N/A'}</p>
             <p><strong>Department:</strong> {productDetails['Department'] || 'N/A'}</p>
             <p><strong>Specific Room:</strong> {productDetails['Specific Room'] || 'N/A'}</p>
+            {/* Add other fields as needed */}
           </div>
         ) : (
           <p>No product found for this barcode.</p>
