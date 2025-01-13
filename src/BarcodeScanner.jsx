@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import QRScanner from 'react-qr-scanner';
 import { Circles } from 'react-loader-spinner';
 
