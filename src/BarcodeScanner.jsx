@@ -59,14 +59,24 @@ const BarcodeScanner = () => {
     setError('Scanner error. Please try again.');
   };
 
+  const previewStyle = {
+    height: 300,
+    width: '100%',
+  };
+
   return (
     <div className="scanner-container">
       <h1>Barcode Scanner</h1>
       <QRScanner
         delay={300}
-        style={{ width: '100%', maxHeight: '300px' }}
+        style={previewStyle}
         onError={handleError}
         onScan={handleScan}
+        constraints={{
+          video: {
+            facingMode: 'environment', // Use the back camera
+          },
+        }}
       />
       {isLoading ? (
         <div style={{ textAlign: 'center' }}>
