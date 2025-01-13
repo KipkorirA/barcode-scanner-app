@@ -21,7 +21,11 @@ const BarcodeScanner = () => {
     setIsLoading(true);
     setError(null);
 
-    const url = `${API_BASE_URL}/${BASE_ID}/${TABLE_NAME}?filterByFormula=({BARCODE}="${barcodeValue}")`;
+    // Trim the barcode value to remove any unwanted spaces or special characters
+    const sanitizedBarcode = barcodeValue.trim();
+    console.log('Sanitized Barcode:', sanitizedBarcode); // Log the barcode value
+
+    const url = `${API_BASE_URL}/${BASE_ID}/${TABLE_NAME}?filterByFormula=({BARCODE}="${sanitizedBarcode}")`;
 
     try {
       const response = await fetch(url, {
@@ -31,6 +35,7 @@ const BarcodeScanner = () => {
       });
 
       const data = await response.json();
+      console.log('Airtable Response:', data); // Log the response from Airtable
 
       if (data.records.length > 0) {
         setProductDetails(data.records[0].fields);
@@ -87,6 +92,7 @@ const BarcodeScanner = () => {
     );
 
     Quagga.onDetected((data) => {
+      console.log('Detected Barcode:', data.codeResult.code); // Log the detected barcode
       setBarcode(data.codeResult.code);
       Quagga.stop();
     });
