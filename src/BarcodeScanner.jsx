@@ -34,6 +34,10 @@ const BarcodeScanner = () => {
         },
       });
 
+      if (!response.ok) {
+        throw new Error(`API request failed with status: ${response.status}`);
+      }
+
       const data = await response.json();
       console.log('Airtable Response:', data); // Log the response from Airtable
 
