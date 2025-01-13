@@ -8,19 +8,22 @@ const BarcodeScanner = () => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const baseID = 'appJwvb3ld1PgjbVj';
-  const tableName = 'Inventory';
-  const apiKey = 'pat5Sgu0drPPxeTXV.73866bafc4074a9d232f03194e7b28bb42be0f5b1ffe7e36fe5ce1b33e5d3b35'; // Hardcoded API key
+  // Access environment variables
+  const API_BASE_URL = import.meta.env.VITE_APP_API_BASE_URL;
+  const API_KEY = import.meta.env.VITE_APP_API_KEY;
+  const BASE_ID = import.meta.env.VITE_APP_BASE_ID;
+  const TABLE_NAME = import.meta.env.VITE_APP_TABLE_NAME;
 
   const fetchProductDetails = async (barcodeValue) => {
     setIsLoading(true);
     setError(null);
-    const url = `https://api.airtable.com/v0/${baseID}/${tableName}?filterByFormula=({BARCODE}="${barcodeValue}")`;
+
+    const url = `${API_BASE_URL}/${BASE_ID}/${TABLE_NAME}?filterByFormula=({BARCODE}="${barcodeValue}")`;
 
     try {
       const response = await fetch(url, {
         headers: {
-          Authorization: `Bearer ${apiKey}`,
+          Authorization: `Bearer ${API_KEY}`,
         },
       });
 
