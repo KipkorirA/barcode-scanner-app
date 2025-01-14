@@ -52,31 +52,32 @@ const BarcodeScanner = () => {
   const startScanner = () => {
     setIsScannerActive(true);
     setError(null);
-
+  
     if (!scannerRef.current) {
       setError('Scanner container is not initialized.');
       return;
     }
-
+  
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       setError('Camera not supported on this device or browser.');
       return;
     }
-
+  
     // Check if video stream is already active
     if (videoStreamRef.current) {
       console.log('Video stream already started');
       return; // Prevent re-initialization
     }
-
+  
+    // Request back camera (facingMode: environment)
     navigator.mediaDevices
-      .getUserMedia({ video: true })
+      .getUserMedia({ video: { facingMode: 'environment' } }) // Ensuring the back camera is used
       .then((stream) => {
         if (scannerRef.current) {
           console.log('Initializing ZXing with video element...');
           videoStreamRef.current = stream; // Save the video stream reference
           scannerRef.current.srcObject = stream; // Set the video element to show the stream
-
+  
           // Start ZXing reader
           codeReader.current
             .decodeFromVideoDevice(null, scannerRef.current, (result, err) => {
@@ -105,6 +106,7 @@ const BarcodeScanner = () => {
         }
       });
   };
+  
 
   const resetScanner = () => {
     setBarcode('');
