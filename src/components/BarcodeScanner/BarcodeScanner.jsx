@@ -59,7 +59,9 @@ const BarcodeScanner = () => {
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${API_KEY}`,
+          'Content-Type': 'application/json',
         },
+        cache: 'no-cache',
       });
 
       if (!response.ok) {
@@ -72,9 +74,10 @@ const BarcodeScanner = () => {
         setProductDetails(data.records[0].fields);
       } else {
         setProductDetails(null);
+        setError('Product not found in database.');
       }
     } catch (fetchError) {
-      setError('Failed to fetch product details.');
+      setError(`Failed to fetch product details: ${fetchError.message}`);
       console.error('Fetch error:', fetchError);
     } finally {
       setIsLoading(false);
@@ -95,11 +98,12 @@ const BarcodeScanner = () => {
 
     try {
       qrCodeScannerRef.current = new Html5QrcodeScanner(
-        scannerContainerRef.current.id,
+        'scanner-container',
         {
-          fps: 5,
-          qrbox: 250,
+          fps: 10,
+          qrbox: { width: 300, height: 300 },
           supportedScanTypes: [Html5QrcodeSupportedFormats.QR_CODE],
+          showTorchButtonIfSupported: true,
         },
         false
       );
@@ -109,14 +113,17 @@ const BarcodeScanner = () => {
           if (!barcode) {
             setBarcode(decodedText);
             fetchProductDetails(decodedText);
+            setScanStatus('Barcode detected!');
+            navigator.vibrate && navigator.vibrate(200);
           }
         },
         (scanError) => {
-          console.error('Scanning error:', scanError);
+          console.debug('Scanning in progress:', scanError);
+          setScanStatus('Scanning...');
         }
       );
     } catch (err) {
-      setError('Failed to initialize scanner.');
+      setError(`Failed to initialize scanner: ${err.message}`);
       console.error('Scanner initialization failed:', err);
     }
   }, [barcode, fetchProductDetails, isScannerActive]);
@@ -131,20 +138,19 @@ const BarcodeScanner = () => {
     if (qrCodeScannerRef.current) {
       qrCodeScannerRef.current.clear().catch((clearError) => {
         console.error('Error clearing scanner:', clearError);
+        setError('Failed to reset scanner. Please refresh the page.');
       });
       qrCodeScannerRef.current = null;
     }
   }, []);
 
   useEffect(() => {
-    if (!isLoading && !barcode) {
-      startScanner();
-    }
-  }, [isLoading, barcode, startScanner]);
-
-  useEffect(() => {
-    return () => resetScanner();
-  }, [resetScanner]);
+    return () => {
+      if (qrCodeScannerRef.current) {
+        qrCodeScannerRef.current.clear().catch(console.error);
+      }
+    };
+  }, []);
 
   const handleReset = () => {
     resetScanner();
@@ -152,15 +158,28 @@ const BarcodeScanner = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto p-8 space-y-6 bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-2xl border border-gray-100 backdrop-blur-sm transition-all duration-300 hover:shadow-xl">
+    <div className="max-w-md mx-auto p-4 space-y-3 bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-2xl border border-gray-100 backdrop-blur-sm transition-all duration-300 hover:shadow-xl">
       <div className="text-center">
-        <h1 className="text-4xl font-extrabold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent tracking-tight">Barcode Scanner</h1>
+        <h1 className="text-4xl font-extrabold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent tracking-tight">Barcode Scanner</h1>
         {!isLoading && !productDetails && (
-          <ScannerUI
-            isScannerActive={isScannerActive}
-            scanStatus={scanStatus}
-            startScanner={startScanner}
-          />
+          <>
+            <ScannerUI
+              isScannerActive={isScannerActive}
+              scanStatus={scanStatus}
+              startScanner={startScanner}
+            />
+            {isScannerActive && (
+              <>
+                <div className="mt-2 text-lg font-semibold text-indigo-600">
+                  {scanStatus}
+                </div>
+                <div className="mt-1 text-sm text-gray-600">
+                  Place the barcode in the center of the camera view
+                </div>
+                <div className="mt-1 h-1 bg-indigo-600 rounded-full animate-[scan_1.5s_ease-in-out_infinite]"></div>
+              </>
+            )}
+          </>
         )}
       </div>
 
@@ -171,8 +190,9 @@ const BarcodeScanner = () => {
       )}
 
       {isLoading ? (
-        <div className="flex justify-center p-8 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl shadow-inner" aria-label="Loading">
-          <Circles color="#4f46e5" height={80} width={80} />
+        <div className="flex justify-center items-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl shadow-inner" aria-label="Loading" role="status">
+          <Circles color="#4f46e5" height={80} width={80} aria-hidden="true" />
+          <span className="sr-only">Loading product details...</span>
         </div>
       ) : (
         <>
@@ -200,7 +220,8 @@ const BarcodeScanner = () => {
       <div 
         id="scanner-container" 
         ref={scannerContainerRef}
-        className="mt-6 rounded-xl overflow-hidden shadow-inner bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200"
+        className="mt-2 rounded-xl overflow-hidden shadow-inner bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200"
+        aria-label="Barcode scanner viewer"
       ></div>
     </div>
   );
@@ -209,7 +230,7 @@ const BarcodeScanner = () => {
 export default function App() {
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-white py-8 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-white py-4 flex items-center justify-center">
         <BarcodeScanner />
       </div>
     </ErrorBoundary>
