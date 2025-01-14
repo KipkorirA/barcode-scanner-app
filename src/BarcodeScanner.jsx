@@ -53,6 +53,12 @@ const BarcodeScanner = () => {
     setIsScannerActive(true);
     setError(null);
   
+    // Prevent starting the scanner if it's already running
+    if (videoStreamRef.current) {
+      console.log('Video stream already started');
+      return; // Prevent re-initialization
+    }
+  
     if (!scannerRef.current) {
       setError('Scanner container is not initialized.');
       return;
@@ -61,12 +67,6 @@ const BarcodeScanner = () => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       setError('Camera not supported on this device or browser.');
       return;
-    }
-  
-    // Check if video stream is already active
-    if (videoStreamRef.current) {
-      console.log('Video stream already started');
-      return; // Prevent re-initialization
     }
   
     // Request back camera (facingMode: environment)
@@ -80,23 +80,24 @@ const BarcodeScanner = () => {
   
           // Start ZXing reader and keep scanning continuously
           const scanFrame = () => {
-            codeReader.current
-              .decodeFromVideoDevice(null, scannerRef.current)
-              .then((result) => {
-                if (result) {
-                  setBarcode(result.getText());
-                  setIsScannerActive(false);
-                  codeReader.current.reset(); // Stop scanning after successful scan
-                }
-              })
-              .catch((err) => {
-                // Ignore errors related to no barcode found and keep scanning
-                if (err && !(err instanceof ZXing.NotFoundException)) {
-                  console.error('Decoding error:', err);
-                }
-              });
-
-            // Keep scanning
+            if (!barcode) { // Only scan if no barcode has been found
+              codeReader.current
+                .decodeFromVideoDevice(null, scannerRef.current)
+                .then((result) => {
+                  if (result && !barcode) {  // Avoid updating barcode if it's already set
+                    setBarcode(result.getText());
+                    setIsScannerActive(false);
+                    codeReader.current.reset(); // Stop scanning after successful scan
+                  }
+                })
+                .catch((err) => {
+                  // Ignore errors related to no barcode found and keep scanning
+                  if (err && !(err instanceof ZXing.NotFoundException)) {
+                    console.error('Decoding error:', err);
+                  }
+                });
+            }
+            // Keep scanning only if the scanner is active
             if (isScannerActive) {
               requestAnimationFrame(scanFrame);
             }
@@ -117,7 +118,6 @@ const BarcodeScanner = () => {
         }
       });
   };
-  
 
   const resetScanner = () => {
     setBarcode('');
