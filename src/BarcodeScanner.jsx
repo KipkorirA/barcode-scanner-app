@@ -11,12 +11,13 @@ const BarcodeScanner = () => {
   const [productDetails, setProductDetails] = useState(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isScannerActive, setIsScannerActive] = useState(true);
+  const [isScannerActive, setIsScannerActive] = useState(false);
+  const [scanStatus, setScanStatus] = useState('');
   const scannerRef = useRef(null);
   const codeReader = useRef(new BrowserMultiFormatReader());
   const videoStreamRef = useRef(null);
   const isScanningRef = useRef(false);
-  const requestIdRef = useRef(null); // Store the animation frame ID
+  const requestIdRef = useRef(null);
 
   const API_BASE_URL = import.meta.env.VITE_APP_API_BASE_URL;
   const API_KEY = import.meta.env.VITE_APP_API_KEY;
@@ -42,7 +43,11 @@ const BarcodeScanner = () => {
       }
 
       const data = await response.json();
-      setProductDetails(data.records.length > 0 ? data.records[0].fields : null);
+      if (data.records.length > 0) {
+        setProductDetails(data.records[0].fields);
+      } else {
+        setError(`No product found for barcode: ${barcodeValue}`);
+      }
     } catch (error) {
       console.error('Error fetching product details:', error);
       setError('Failed to fetch product details. Please try again.');
@@ -55,8 +60,9 @@ const BarcodeScanner = () => {
     if (barcode || !isScannerActive || isScanningRef.current) return;
 
     isScanningRef.current = true;
-
+    setScanStatus('Scanning...');
     setError(null);
+
     if (!scannerRef.current) {
       setError('Scanner container is not initialized.');
       return;
@@ -67,7 +73,6 @@ const BarcodeScanner = () => {
       return;
     }
 
-    // Request camera access only if it's not already active
     if (!videoStreamRef.current) {
       navigator.mediaDevices
         .getUserMedia({ video: { facingMode: 'environment' } })
@@ -76,10 +81,9 @@ const BarcodeScanner = () => {
             videoStreamRef.current = stream;
             scannerRef.current.srcObject = stream;
 
-            // Start ZXing reader and continuously scan
             const scanFrame = () => {
               if (barcode || !isScannerActive) {
-                // Stop scanning if barcode is found or scanner is inactive
+                setScanStatus('Scan finished.');
                 cancelAnimationFrame(requestIdRef.current);
                 return;
               }
@@ -89,10 +93,11 @@ const BarcodeScanner = () => {
                 .then((result) => {
                   if (result && !barcode) {
                     setBarcode(result.getText());
-                    setIsScannerActive(false); // Stop the scanner once barcode is found
+                    setIsScannerActive(false);
                     isScanningRef.current = false;
-                    codeReader.current.reset(); // Stop scanning after successful scan
-                    cancelAnimationFrame(requestIdRef.current); // Cancel the animation frame to stop further scanning
+                    setScanStatus('Scan finished.');
+                    codeReader.current.reset();
+                    cancelAnimationFrame(requestIdRef.current);
                   }
                 })
                 .catch((err) => {
@@ -101,13 +106,12 @@ const BarcodeScanner = () => {
                   }
                 });
 
-              // Continue scanning only if barcode is not found
               if (isScannerActive && !barcode) {
-                requestIdRef.current = requestAnimationFrame(scanFrame); // Continue scanning
+                requestIdRef.current = requestAnimationFrame(scanFrame);
               }
             };
 
-            scanFrame(); // Start the scanning loop
+            scanFrame();
           }
         })
         .catch((err) => {
@@ -116,6 +120,8 @@ const BarcodeScanner = () => {
             setError('Camera access was denied. Please allow camera access in your browser settings.');
           } else if (err.name === 'NotFoundError') {
             setError('No camera found on this device.');
+          } else if (err.name === 'NotReadableError') {
+            setError('Camera is already in use by another application.');
           } else {
             setError('An unexpected error occurred while accessing the camera.');
           }
@@ -129,7 +135,8 @@ const BarcodeScanner = () => {
     setBarcode('');
     setProductDetails(null);
     setError(null);
-    setIsScannerActive(true);
+    setScanStatus('');
+    setIsScannerActive(false);
     isScanningRef.current = false;
 
     if (videoStreamRef.current) {
@@ -139,14 +146,12 @@ const BarcodeScanner = () => {
     videoStreamRef.current = null;
 
     codeReader.current.reset();
-    cancelAnimationFrame(requestIdRef.current); // Cancel ongoing animation frame
-    startScanner(); // Restart scanner
+    cancelAnimationFrame(requestIdRef.current);
   };
 
   useEffect(() => {
-    startScanner(); // Start scanner when component mounts
     return () => {
-      cancelAnimationFrame(requestIdRef.current); // Cleanup when component unmounts
+      cancelAnimationFrame(requestIdRef.current);
     };
   }, []);
 
@@ -191,6 +196,7 @@ const BarcodeScanner = () => {
             <div className="absolute inset-0 border-2 border-blue-500 opacity-50 pointer-events-none" />
           </div>
         )}
+        {scanStatus && <div className="mt-2 text-lg">{scanStatus}</div>}
       </div>
 
       {error && (
@@ -225,9 +231,9 @@ const BarcodeScanner = () => {
         </>
       )}
 
-      {!isScannerActive && !productDetails && !isLoading && (
+      {!isScannerActive && !barcode && !isLoading && (
         <Button
-          onClick={resetScanner}
+          onClick={() => setIsScannerActive(true)}
           className="w-full flex items-center justify-center gap-2"
         >
           <Camera className="w-4 h-4" />
