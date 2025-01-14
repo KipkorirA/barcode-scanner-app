@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library';
+import { Html5QrcodeScanner } from 'html5-qrcode';
 
 export const useBarcodeScanner = () => {
     const [barcode, setBarcode] = useState('');
@@ -9,10 +9,7 @@ export const useBarcodeScanner = () => {
     const [isScannerActive, setIsScannerActive] = useState(false);
     const [scanStatus, setScanStatus] = useState('');
     const scannerRef = useRef(null);
-    const codeReader = useRef(new BrowserMultiFormatReader());
-    const videoStreamRef = useRef(null);
-    const isScanningRef = useRef(false);
-    const requestIdRef = useRef(null);
+    const scannerInstanceRef = useRef(null);
 
     const API_BASE_URL = import.meta.env.VITE_APP_API_BASE_URL;
     const API_KEY = import.meta.env.VITE_APP_API_KEY;
@@ -30,15 +27,16 @@ export const useBarcodeScanner = () => {
             });
             const data = await response.json();
             setProductDetails(data.records.length > 0 ? data.records[0].fields : null);
-        } catch (err) {
+        } catch (error) {
             setError('Failed to fetch product details.');
+            console.error('Fetch error:', error);
         } finally {
             setIsLoading(false);
         }
     }, [API_BASE_URL, API_KEY, BASE_ID, TABLE_NAME]);
 
     const startScanner = () => {
-        if (barcode || isScannerActive || isScanningRef.current) return;
+        if (barcode || isScannerActive) return;
 
         setIsScannerActive(true);
         setError(null);
@@ -50,98 +48,53 @@ export const useBarcodeScanner = () => {
             return;
         }
 
-        navigator.mediaDevices
-            .getUserMedia({ video: { facingMode: 'environment' } })
-            .then((stream) => {
-                if (scannerRef.current) {
-                    videoStreamRef.current = stream;
-                    scannerRef.current.srcObject = stream;
+        // Initialize the scanner with the Html5QrcodeScanner
+        scannerInstanceRef.current = new Html5QrcodeScanner(
+            scannerRef.current,
+            {
+                fps: 10, // Frames per second for scanning
+                qrbox: 250, // Set the size of the scanning box (adjust based on preference)
+                supportedScanTypes: [Html5QrcodeScanner.SCAN_TYPE_BARCODE] // Ensures only barcode scanning
+            },
+            false
+        );
 
-                    scannerRef.current.onloadedmetadata = () => {
-                        console.log('Camera metadata loaded, starting scanning...');
-                        setScanStatus('Scanning...');
-                        isScanningRef.current = true;
-                        scanFrame();
-                    };
-                }
-            })
-            .catch((error) => {
-                console.error('Camera access denied:', error.message);
-                handleCameraError(error);
-            });
-
-        const scanFrame = () => {
-            if (!scannerRef.current || !isScannerActive || barcode) {
-                setScanStatus('Scan finished.');
-                cancelAnimationFrame(requestIdRef.current);
-                return;
-            }
-
-            codeReader.current
-                .decodeFromVideoElement(scannerRef.current)
-                .then((result) => {
-                    if (result && !barcode) {
-                        setBarcode(result.getText());
-                        setIsScannerActive(false);
-                        isScanningRef.current = false;
-                        setScanStatus('Scan finished.');
-                        codeReader.current.reset();
-                        cancelAnimationFrame(requestIdRef.current);
-                    }
-                })
-                .catch((error) => {
-                    if (error && !(error instanceof NotFoundException)) {
-                        console.error('Decoding error:', error);
-                    }
-                });
-
-            if (isScannerActive && !barcode) {
-                requestIdRef.current = requestAnimationFrame(scanFrame);
-            }
-        };
+        // Start scanning for barcodes
+        scannerInstanceRef.current.render(onScanSuccess, onScanError);
     };
 
-    const handleCameraError = (error) => {
-        if (error.name === 'NotAllowedError') {
-            setError('Camera access was denied. Please allow camera access in your browser settings.');
-        } else if (error.name === 'NotFoundError') {
-            setError('No camera found on this device.');
-        } else if (error.name === 'NotReadableError') {
-            setError('Camera is already in use by another application.');
-        } else {
-            setError('An unexpected error occurred while accessing the camera.');
+    const onScanSuccess = (decodedText) => {
+        if (!barcode) {
+            setBarcode(decodedText); // Set barcode after successful scan
+            setIsScannerActive(false); // Stop scanner after successful scan
+            setScanStatus('Scan finished.');
+            scannerInstanceRef.current.clear(); // Clear the scanner instance
         }
-        setIsScannerActive(false);
-        setScanStatus('');
     };
 
-    const resetScanner = () => {
+    const onScanError = (error) => {
+        console.error('Scan error:', error); // Handle scanning errors
+    };
+
+    const resetScanner = useCallback(() => {
         setBarcode('');
         setProductDetails(null);
         setError(null);
         setScanStatus('');
         setIsScannerActive(false);
-        isScanningRef.current = false;
 
-        if (videoStreamRef.current) {
-            const tracks = videoStreamRef.current.getTracks();
-            tracks.forEach((track) => track.stop());
+        if (scannerInstanceRef.current) {
+            scannerInstanceRef.current.clear(); // Clear the scanner instance when resetting
         }
-        videoStreamRef.current = null;
-
-        codeReader.current.reset();
-        cancelAnimationFrame(requestIdRef.current);
-    };
-
-    useEffect(() => {
-        return () => {
-            resetScanner();
-        };
     }, []);
 
     useEffect(() => {
+        return resetScanner;
+    }, [resetScanner]);
+
+    useEffect(() => {
         if (barcode) {
-            fetchProductDetails(barcode);
+            fetchProductDetails(barcode); // Fetch product details based on scanned barcode
         }
     }, [barcode, fetchProductDetails]);
 

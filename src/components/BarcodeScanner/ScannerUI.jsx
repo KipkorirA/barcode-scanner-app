@@ -3,25 +3,35 @@ import { Camera } from 'lucide-react';
 import PropTypes from 'prop-types';
 
 const ScannerUI = ({ isScannerActive, scanStatus, startScanner }) => {
-  const scannerRef = useRef();
+  const scannerRef = useRef(null);
 
-  return isScannerActive ? (
-    <div className="relative">
-      <video
-        ref={scannerRef}
-        className="w-full aspect-video bg-gray-900 rounded-lg overflow-hidden"
-        autoPlay
-        muted
-        playsInline
-      />
-      <div className="absolute inset-0 border-2 border-blue-500 opacity-50 pointer-events-none" />
-      {scanStatus && <div className="mt-2 text-lg">{scanStatus}</div>}
+  return (
+    <div className="w-full">
+      {isScannerActive ? (
+        <div className="relative">
+          <video
+            ref={scannerRef}
+            className="w-full aspect-video bg-gray-900 rounded-lg overflow-hidden"
+            autoPlay
+            muted
+            playsInline
+          />
+          <div className="absolute inset-0 border-2 border-blue-500 opacity-50 pointer-events-none" />
+          {scanStatus && (
+            <div className="mt-2 text-lg font-medium text-gray-700">{scanStatus}</div>
+          )}
+        </div>
+      ) : (
+        <button
+          onClick={startScanner}
+          className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          aria-label="Start barcode scanner"
+        >
+          <Camera className="w-5 h-5" />
+          Start Scanning
+        </button>
+      )}
     </div>
-  ) : (
-    <button onClick={startScanner} className="w-full flex items-center justify-center gap-2">
-      <Camera className="w-4 h-4" />
-      Start Scanning
-    </button>
   );
 };
 
