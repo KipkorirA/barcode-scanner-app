@@ -23,7 +23,7 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      return <h1 className="text-2xl font-bold text-red-600 text-center p-4 bg-red-100 rounded-lg shadow-md">Something went wrong. Please refresh the page.</h1>;
+      return <h1 className="text-2xl font-bold text-red-600 text-center p-6 bg-gradient-to-r from-red-100 to-pink-100 rounded-xl shadow-lg border border-red-200 animate-pulse">Something went wrong. Please refresh the page.</h1>;
     }
     return this.props.children;
   }
@@ -152,9 +152,9 @@ const BarcodeScanner = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto p-6 space-y-6 bg-white rounded-xl shadow-lg">
+    <div className="max-w-md mx-auto p-8 space-y-6 bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-2xl border border-gray-100 backdrop-blur-sm transition-all duration-300 hover:shadow-xl">
       <div className="text-center">
-        <h1 className="text-3xl font-bold mb-6 text-gray-800 tracking-tight">Barcode Scanner</h1>
+        <h1 className="text-4xl font-extrabold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent tracking-tight">Barcode Scanner</h1>
         {!isLoading && !productDetails && (
           <ScannerUI
             isScannerActive={isScannerActive}
@@ -165,29 +165,29 @@ const BarcodeScanner = () => {
       </div>
 
       {error && (
-        <Alert variant="destructive" className="border-2 border-red-200">
+        <Alert variant="destructive" className="border-2 border-red-200 animate-pulse">
           <AlertDescription className="font-medium">{error}</AlertDescription>
         </Alert>
       )}
 
       {isLoading ? (
-        <div className="flex justify-center p-6 bg-gray-50 rounded-lg" aria-label="Loading">
-          <Circles color="#3b82f6" height={60} width={60} />
+        <div className="flex justify-center p-8 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl shadow-inner" aria-label="Loading">
+          <Circles color="#4f46e5" height={80} width={80} />
         </div>
       ) : (
         <>
           {barcode && !isScannerActive && (
-            <div className="transition-all duration-300 ease-in-out">
+            <div className="transition-all duration-300 ease-in-out transform hover:scale-102">
               <ScannerControlButtons onReset={handleReset} />
             </div>
           )}
           {productDetails ? (
-            <div className="transition-all duration-300 ease-in-out">
+            <div className="transition-all duration-300 ease-in-out transform hover:scale-102">
               <ProductCard product={productDetails} />
             </div>
           ) : (
             barcode && (
-              <Alert className="bg-blue-50 border border-blue-200">
+              <Alert className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 shadow-sm">
                 <AlertDescription className="text-blue-700 font-medium">
                   No product found for barcode: {barcode}
                 </AlertDescription>
@@ -200,7 +200,7 @@ const BarcodeScanner = () => {
       <div 
         id="scanner-container" 
         ref={scannerContainerRef}
-        className="mt-6 rounded-lg overflow-hidden shadow-inner bg-gray-50"
+        className="mt-6 rounded-xl overflow-hidden shadow-inner bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200"
       ></div>
     </div>
   );
@@ -209,7 +209,7 @@ const BarcodeScanner = () => {
 export default function App() {
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gray-100 py-8 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-white py-8 flex items-center justify-center">
         <BarcodeScanner />
       </div>
     </ErrorBoundary>
