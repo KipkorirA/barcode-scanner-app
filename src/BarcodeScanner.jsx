@@ -13,17 +13,11 @@ const BarcodeScanner = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isScannerActive, setIsScannerActive] = useState(true);
   const scannerRef = useRef(null);
-  const isProcessing = useRef(false); // Prevent multiple detections
 
   const API_BASE_URL = import.meta.env.VITE_APP_API_BASE_URL;
   const API_KEY = import.meta.env.VITE_APP_API_KEY;
   const BASE_ID = import.meta.env.VITE_APP_BASE_ID;
   const TABLE_NAME = import.meta.env.VITE_APP_TABLE_NAME;
-
-  // Function to validate barcode
-  const isValidBarcode = (code) => {
-    return /^\d+$/.test(code) && code.length >= 6 && code.length <= 13; // Numeric and length validation
-  };
 
   const fetchProductDetails = async (barcodeValue) => {
     setIsLoading(true);
@@ -67,23 +61,31 @@ const BarcodeScanner = () => {
             facingMode: "environment",
             width: 640,
             height: 480,
+            aspectRatio: { min: 1, max: 2 }
           },
         },
         locator: {
-          patchSize: "large", // Increase patch size for better detection
-          halfSample: false,  // Disable half-sampling for more accuracy
+          patchSize: "medium",
+          halfSample: true
         },
-        numOfWorkers: 2, // Adjust for device performance
+        numOfWorkers: 4,
         decoder: {
-          readers: ["code_128_reader", "ean_reader", "upc_reader"], // Limit readers to necessary types
+          readers: [
+            "code_128_reader", 
+            "ean_reader", 
+            "ean_8_reader", 
+            "upc_reader", 
+            "upc_e_reader", 
+            "code_39_reader", 
+            "codabar_reader", 
+            "i2of5_reader"
+          ],
           debug: {
             drawBoundingBox: true,
-            showFrequency: true,
-            drawScanline: true,
-            showPattern: true,
-          },
+            showPattern: true
+          }
         },
-        locate: true,
+        locate: true
       },
       (err) => {
         if (err) {
@@ -96,19 +98,11 @@ const BarcodeScanner = () => {
     );
 
     Quagga.onDetected((result) => {
-      if (isProcessing.current) return; // Skip if already processing
-
       const code = result.codeResult.code;
-      if (isValidBarcode(code)) {
-        isProcessing.current = true; // Prevent additional detections
+      if (code && code.length >= 6) {  // Basic validation
         setBarcode(code);
         setIsScannerActive(false);
         Quagga.stop();
-
-        // Reset processing state after a delay
-        setTimeout(() => {
-          isProcessing.current = false;
-        }, 2000);
       }
     });
   };
@@ -122,7 +116,7 @@ const BarcodeScanner = () => {
 
   useEffect(() => {
     if (barcode) {
-      const timeout = setTimeout(() => fetchProductDetails(barcode), 500); // Debounce API call
+      const timeout = setTimeout(() => fetchProductDetails(barcode), 500);
       return () => clearTimeout(timeout);
     }
   }, [barcode]);
