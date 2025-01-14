@@ -16,7 +16,7 @@ const BarcodeScanner = () => {
   const codeReader = useRef(new BrowserMultiFormatReader());
   const videoStreamRef = useRef(null);
   const isScanningRef = useRef(false);
-  const scanIntervalRef = useRef(null); // Store the interval ID
+  const requestIdRef = useRef(null); // Store the animation frame ID
 
   const API_BASE_URL = import.meta.env.VITE_APP_API_BASE_URL;
   const API_KEY = import.meta.env.VITE_APP_API_KEY;
@@ -76,10 +76,11 @@ const BarcodeScanner = () => {
             videoStreamRef.current = stream;
             scannerRef.current.srcObject = stream;
 
-            // Start ZXing reader and periodically scan
+            // Start ZXing reader and continuously scan
             const scanFrame = () => {
               if (barcode || !isScannerActive) {
-                clearInterval(scanIntervalRef.current); // Stop scanning after barcode is found
+                // Stop scanning if barcode is found or scanner is inactive
+                cancelAnimationFrame(requestIdRef.current);
                 return;
               }
 
@@ -91,7 +92,7 @@ const BarcodeScanner = () => {
                     setIsScannerActive(false); // Stop the scanner once barcode is found
                     isScanningRef.current = false;
                     codeReader.current.reset(); // Stop scanning after successful scan
-                    clearInterval(scanIntervalRef.current); // Stop the interval
+                    cancelAnimationFrame(requestIdRef.current); // Cancel the animation frame to stop further scanning
                   }
                 })
                 .catch((err) => {
@@ -99,10 +100,14 @@ const BarcodeScanner = () => {
                     console.error('Decoding error:', err);
                   }
                 });
+
+              // Continue scanning only if barcode is not found
+              if (isScannerActive && !barcode) {
+                requestIdRef.current = requestAnimationFrame(scanFrame); // Continue scanning
+              }
             };
 
-            // Set an interval to check for the barcode every 500ms
-            scanIntervalRef.current = setInterval(scanFrame, 500);
+            scanFrame(); // Start the scanning loop
           }
         })
         .catch((err) => {
@@ -134,14 +139,14 @@ const BarcodeScanner = () => {
     videoStreamRef.current = null;
 
     codeReader.current.reset();
-    clearInterval(scanIntervalRef.current); // Clear the interval
+    cancelAnimationFrame(requestIdRef.current); // Cancel ongoing animation frame
     startScanner(); // Restart scanner
   };
 
   useEffect(() => {
     startScanner(); // Start scanner when component mounts
     return () => {
-      clearInterval(scanIntervalRef.current); // Cleanup when component unmounts
+      cancelAnimationFrame(requestIdRef.current); // Cleanup when component unmounts
     };
   }, []);
 
