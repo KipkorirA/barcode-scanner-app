@@ -1,4 +1,4 @@
-import React from 'react';
+import PropTypes from 'prop-types';
 
 export const Alert = ({ children, variant = 'default', className }) => {
   const variantClasses = {
@@ -19,8 +19,19 @@ export const Alert = ({ children, variant = 'default', className }) => {
   );
 };
 
+Alert.propTypes = {
+  children: PropTypes.node.isRequired,
+  variant: PropTypes.oneOf(['default', 'success', 'destructive', 'warning']),
+  className: PropTypes.string,
+};
+
 export const AlertDescription = ({ children, className }) => (
   <div className={`text-sm ${className || ''}`}>{children}</div>
 );
+
+AlertDescription.propTypes = {
+  children: PropTypes.node.isRequired,
+  className: PropTypes.string,
+};
 
 export default { Alert, AlertDescription };

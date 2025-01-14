@@ -1,5 +1,5 @@
 
-import BarcodeScanner from './BarcodeScanner';
+import BarcodeScanner from './components/BarcodeScanner/BarcodeScanner';
 
 function App() {
   return (
