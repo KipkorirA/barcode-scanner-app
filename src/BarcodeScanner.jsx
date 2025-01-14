@@ -14,6 +14,7 @@ const BarcodeScanner = () => {
   const [isScannerActive, setIsScannerActive] = useState(true);
   const scannerRef = useRef(null);
   const codeReader = useRef(new BrowserMultiFormatReader()); // Instantiate ZXing reader
+  const videoStreamRef = useRef(null); // To track video stream
 
   const API_BASE_URL = import.meta.env.VITE_APP_API_BASE_URL;
   const API_KEY = import.meta.env.VITE_APP_API_KEY;
@@ -52,21 +53,62 @@ const BarcodeScanner = () => {
     setIsScannerActive(true);
     setError(null);
 
-    if (!scannerRef.current) return;
+    // Check if video element is available before proceeding
+    if (!scannerRef.current) {
+      setError('Scanner container is not initialized.');
+      return;
+    }
 
-    codeReader.current
-      .decodeFromVideoDevice(null, scannerRef.current, (result, err) => {
-        if (result) {
-          setBarcode(result.getText());
-          setIsScannerActive(false);
-          codeReader.current.reset(); // Stop the scanner
-        } else if (err && !(err instanceof ZXing.NotFoundException)) {
-          console.error(err);
+    // Log the video element to debug availability
+    console.log('Scanner video element:', scannerRef.current);
+
+    // Ensure camera is supported and accessible
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setError('Camera not supported on this device or browser.');
+      return;
+    }
+
+    // Check if video stream is already active
+    if (videoStreamRef.current) {
+      console.log('Video stream already started');
+      return; // Prevent re-initialization
+    }
+
+    navigator.mediaDevices
+      .getUserMedia({ video: true })
+      .then((stream) => {
+        // Stop all tracks from the stream to avoid memory leaks
+        stream.getTracks().forEach((track) => track.stop());
+
+        // Check if video element is still available
+        if (scannerRef.current) {
+          console.log('Initializing ZXing with video element...');
+          videoStreamRef.current = stream; // Save the video stream to prevent re-initiation
+          codeReader.current
+            .decodeFromVideoDevice(null, scannerRef.current, (result, err) => {
+              if (result) {
+                setBarcode(result.getText());
+                setIsScannerActive(false);
+                codeReader.current.reset(); // Stop scanning after successful scan
+              } else if (err && !(err instanceof ZXing.NotFoundException)) {
+                console.error('Decoding error:', err);
+              }
+            })
+            .catch((err) => {
+              console.error('ZXing initialization failed:', err);
+              setError('Failed to initialize scanner. Please ensure camera permissions are granted.');
+            });
         }
       })
       .catch((err) => {
-        console.error('ZXing init failed:', err);
-        setError('Failed to initialize scanner. Please check camera permissions.');
+        console.error('Camera access denied:', err.message);
+        if (err.name === 'NotAllowedError') {
+          setError('Camera access was denied. Please allow camera access in your browser settings.');
+        } else if (err.name === 'NotFoundError') {
+          setError('No camera found on this device.');
+        } else {
+          setError('An unexpected error occurred while accessing the camera.');
+        }
       });
   };
 
@@ -78,18 +120,21 @@ const BarcodeScanner = () => {
   };
 
   useEffect(() => {
+    // Ensure the ref is correctly assigned before starting the scanner
+    if (scannerRef.current) {
+      console.log('Ref is initialized, starting scanner...');
+      startScanner();
+    } else {
+      console.log('Ref not initialized yet...');
+    }
+  }, []); // Empty dependency array ensures this only runs once after initial render
+
+  useEffect(() => {
     if (barcode) {
       const timeout = setTimeout(() => fetchProductDetails(barcode), 500);
       return () => clearTimeout(timeout);
     }
   }, [barcode]);
-
-  useEffect(() => {
-    startScanner();
-    return () => {
-      codeReader.current.reset(); // Stop scanning on unmount
-    };
-  }, []);
 
   const ProductCard = ({ product }) => (
     <Card className="w-full mt-4">
@@ -115,9 +160,13 @@ const BarcodeScanner = () => {
         <h1 className="text-2xl font-bold mb-4">Barcode Scanner</h1>
         {isScannerActive && (
           <div className="relative">
-            <div 
-              ref={scannerRef} 
+            {/* Render a video element for ZXing */}
+            <video
+              ref={scannerRef} // This is the video element for ZXing
               className="w-full aspect-video bg-gray-900 rounded-lg overflow-hidden"
+              autoPlay
+              muted
+              playsInline
             />
             <div className="absolute inset-0 border-2 border-blue-500 opacity-50 pointer-events-none" />
           </div>
