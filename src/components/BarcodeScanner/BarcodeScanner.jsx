@@ -39,19 +39,24 @@ const BarcodeScanner = () => {
   const scannerContainerRef = useRef(null);
   const qrCodeScannerRef = useRef(null);
 
-  const API_BASE_URL = import.meta.env.VITE_APP_API_BASE_URL || 'http://default-url.com';
   const API_KEY = import.meta.env.VITE_APP_API_KEY || 'default-api-key';
-  const BASE_ID = import.meta.env.VITE_APP_BASE_ID || 'default-base-id';
-  const TABLE_NAME = import.meta.env.VITE_APP_TABLE_NAME || 'default-table';
+  const API_BASE_URL = 'https://api.airtable.com/v0/appJwvb3ld1PgjbVj';  // Fixed to Airtable API base URL
+  const TABLE_ID = 'tblRb8tVYVmjyY2Tq';  // Table ID for Clean_Tags
+  const BARCODE_FIELD_ID = 'fldBARCODE';  // Replace with the actual field ID for barcode
 
   const fetchProductDetails = useCallback(async (barcodeValue) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const url = `${API_BASE_URL}/${BASE_ID}/${TABLE_NAME}?filterByFormula=({BARCODE}="${barcodeValue}")`;
+      // Build the Airtable API URL using table ID and field ID
+      const url = `${API_BASE_URL}/${TABLE_ID}?filterByFormula=${encodeURIComponent(`{${BARCODE_FIELD_ID}}="${barcodeValue}"`)}`;
+
+      // Make the API request
       const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${API_KEY}` },
+        headers: {
+          Authorization: `Bearer ${API_KEY}`,
+        },
       });
 
       if (!response.ok) {
@@ -60,7 +65,7 @@ const BarcodeScanner = () => {
 
       const data = await response.json();
 
-      if (data.records.length > 0) {
+      if (data.records && data.records.length > 0) {
         setProductDetails(data.records[0].fields);
       } else {
         setProductDetails(null);
@@ -71,7 +76,7 @@ const BarcodeScanner = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [API_BASE_URL, API_KEY, BASE_ID, TABLE_NAME]);
+  }, [API_KEY]);
 
   const startScanner = useCallback(() => {
     if (isScannerActive || barcode) return;
