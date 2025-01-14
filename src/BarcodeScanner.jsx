@@ -78,21 +78,32 @@ const BarcodeScanner = () => {
           videoStreamRef.current = stream; // Save the video stream reference
           scannerRef.current.srcObject = stream; // Set the video element to show the stream
   
-          // Start ZXing reader
-          codeReader.current
-            .decodeFromVideoDevice(null, scannerRef.current, (result, err) => {
-              if (result) {
-                setBarcode(result.getText());
-                setIsScannerActive(false);
-                codeReader.current.reset(); // Stop scanning after successful scan
-              } else if (err && !(err instanceof ZXing.NotFoundException)) {
-                console.error('Decoding error:', err);
-              }
-            })
-            .catch((err) => {
-              console.error('ZXing initialization failed:', err);
-              setError('Failed to initialize scanner. Please ensure camera permissions are granted.');
-            });
+          // Start ZXing reader and keep scanning continuously
+          const scanFrame = () => {
+            codeReader.current
+              .decodeFromVideoDevice(null, scannerRef.current)
+              .then((result) => {
+                if (result) {
+                  setBarcode(result.getText());
+                  setIsScannerActive(false);
+                  codeReader.current.reset(); // Stop scanning after successful scan
+                }
+              })
+              .catch((err) => {
+                // Ignore errors related to no barcode found and keep scanning
+                if (err && !(err instanceof ZXing.NotFoundException)) {
+                  console.error('Decoding error:', err);
+                }
+              });
+
+            // Keep scanning
+            if (isScannerActive) {
+              requestAnimationFrame(scanFrame);
+            }
+          };
+
+          // Start the scanning loop
+          scanFrame();
         }
       })
       .catch((err) => {
