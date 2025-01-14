@@ -52,10 +52,12 @@ const BarcodeScanner = () => {
   const fetchProductDetails = useCallback(async (barcodeValue) => {
     setIsLoading(true);
     setError(null);
-
+  
     try {
-      const url = `${API_BASE_URL}/${TABLE_ID}?filterByFormula=${encodeURIComponent(`{${BARCODE_FIELD_ID}}="${barcodeValue}"`)}`;
-
+      // Properly format and encode the filterByFormula query
+      const formula = `({${BARCODE_FIELD_ID}} = "${barcodeValue}")`;
+      const url = `${API_BASE_URL}/${TABLE_ID}?filterByFormula=${encodeURIComponent(formula)}`;
+  
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${API_KEY}`,
@@ -63,13 +65,13 @@ const BarcodeScanner = () => {
         },
         cache: 'no-cache',
       });
-
+  
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
+  
       const data = await response.json();
-
+  
       if (data.records && data.records.length > 0) {
         setProductDetails(data.records[0].fields);
       } else {
@@ -83,7 +85,7 @@ const BarcodeScanner = () => {
       setIsLoading(false);
     }
   }, [API_KEY]);
-
+  
   const startScanner = useCallback(() => {
     if (isScannerActive || barcode) return;
 
