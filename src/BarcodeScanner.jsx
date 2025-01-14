@@ -13,8 +13,8 @@ const BarcodeScanner = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isScannerActive, setIsScannerActive] = useState(true);
   const scannerRef = useRef(null);
-  const codeReader = useRef(new BrowserMultiFormatReader()); // Instantiate ZXing reader
-  const videoStreamRef = useRef(null); // To track video stream
+  const codeReader = useRef(new BrowserMultiFormatReader()); // ZXing reader
+  const videoStreamRef = useRef(null); // To track video stream initialization
 
   const API_BASE_URL = import.meta.env.VITE_APP_API_BASE_URL;
   const API_KEY = import.meta.env.VITE_APP_API_KEY;
@@ -53,16 +53,11 @@ const BarcodeScanner = () => {
     setIsScannerActive(true);
     setError(null);
 
-    // Check if video element is available before proceeding
     if (!scannerRef.current) {
       setError('Scanner container is not initialized.');
       return;
     }
 
-    // Log the video element to debug availability
-    console.log('Scanner video element:', scannerRef.current);
-
-    // Ensure camera is supported and accessible
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       setError('Camera not supported on this device or browser.');
       return;
@@ -77,13 +72,12 @@ const BarcodeScanner = () => {
     navigator.mediaDevices
       .getUserMedia({ video: true })
       .then((stream) => {
-        // Stop all tracks from the stream to avoid memory leaks
-        stream.getTracks().forEach((track) => track.stop());
-
-        // Check if video element is still available
         if (scannerRef.current) {
           console.log('Initializing ZXing with video element...');
-          videoStreamRef.current = stream; // Save the video stream to prevent re-initiation
+          videoStreamRef.current = stream; // Save the video stream reference
+          scannerRef.current.srcObject = stream; // Set the video element to show the stream
+
+          // Start ZXing reader
           codeReader.current
             .decodeFromVideoDevice(null, scannerRef.current, (result, err) => {
               if (result) {
@@ -103,7 +97,7 @@ const BarcodeScanner = () => {
       .catch((err) => {
         console.error('Camera access denied:', err.message);
         if (err.name === 'NotAllowedError') {
-          setError('Camera access was denied. Please allow camera access in your browser settings.');
+          setError('Camera access was denied. Please allow camera access in your browser settings.\nTip: Go to browser settings and enable camera access.');
         } else if (err.name === 'NotFoundError') {
           setError('No camera found on this device.');
         } else {
@@ -116,11 +110,21 @@ const BarcodeScanner = () => {
     setBarcode('');
     setProductDetails(null);
     setError(null);
-    startScanner();
+    setIsScannerActive(true);
+    
+    // Stop current video stream if it's active
+    if (videoStreamRef.current) {
+      const tracks = videoStreamRef.current.getTracks();
+      tracks.forEach(track => track.stop()); // Stop all tracks
+    }
+    videoStreamRef.current = null; // Clear video stream reference
+
+    // Reset ZXing reader state and start scanner again
+    codeReader.current.reset();
+    startScanner(); // Restart scanner
   };
 
   useEffect(() => {
-    // Ensure the ref is correctly assigned before starting the scanner
     if (scannerRef.current) {
       console.log('Ref is initialized, starting scanner...');
       startScanner();
@@ -160,7 +164,6 @@ const BarcodeScanner = () => {
         <h1 className="text-2xl font-bold mb-4">Barcode Scanner</h1>
         {isScannerActive && (
           <div className="relative">
-            {/* Render a video element for ZXing */}
             <video
               ref={scannerRef} // This is the video element for ZXing
               className="w-full aspect-video bg-gray-900 rounded-lg overflow-hidden"
