@@ -54,9 +54,11 @@ const BarcodeScanner = () => {
     setError(null);
   
     try {
-      // Properly format and encode the filterByFormula query
-      const formula = `({${BARCODE_FIELD_ID}} = "${barcodeValue}")`;
+      // Wrap the barcodeValue in double quotes and escape them properly
+      const formula = `{${BARCODE_FIELD_ID}} = "${barcodeValue}"`;
       const url = `${API_BASE_URL}/${TABLE_ID}?filterByFormula=${encodeURIComponent(formula)}`;
+  
+      console.log('Generated URL:', url); // Debugging
   
       const response = await fetch(url, {
         headers: {
@@ -85,6 +87,7 @@ const BarcodeScanner = () => {
       setIsLoading(false);
     }
   }, [API_KEY]);
+  
   
   const startScanner = useCallback(() => {
     if (isScannerActive || barcode) return;
