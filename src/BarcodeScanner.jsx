@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import Quagga from 'quagga';
+import { BrowserMultiFormatReader } from '@zxing/library'; // Import ZXing
 import { Circles } from 'react-loader-spinner';
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card';
 import { Button } from './components/ui/button';
@@ -13,6 +13,7 @@ const BarcodeScanner = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isScannerActive, setIsScannerActive] = useState(true);
   const scannerRef = useRef(null);
+  const codeReader = useRef(new BrowserMultiFormatReader()); // Instantiate ZXing reader
 
   const API_BASE_URL = import.meta.env.VITE_APP_API_BASE_URL;
   const API_KEY = import.meta.env.VITE_APP_API_KEY;
@@ -51,60 +52,22 @@ const BarcodeScanner = () => {
     setIsScannerActive(true);
     setError(null);
 
-    Quagga.init(
-      {
-        inputStream: {
-          name: "Live",
-          type: "LiveStream",
-          target: scannerRef.current,
-          constraints: {
-            facingMode: "environment",
-            width: 640,
-            height: 480,
-            aspectRatio: { min: 1, max: 2 }
-          },
-        },
-        locator: {
-          patchSize: "medium",
-          halfSample: true
-        },
-        numOfWorkers: 4,
-        decoder: {
-          readers: [
-            "code_128_reader", 
-            "ean_reader", 
-            "ean_8_reader", 
-            "upc_reader", 
-            "upc_e_reader", 
-            "code_39_reader", 
-            "codabar_reader", 
-            "i2of5_reader"
-          ],
-          debug: {
-            drawBoundingBox: true,
-            showPattern: true
-          }
-        },
-        locate: true
-      },
-      (err) => {
-        if (err) {
-          console.error('Quagga init failed:', err);
-          setError('Failed to initialize scanner. Please check camera permissions.');
-          return;
-        }
-        Quagga.start();
-      }
-    );
+    if (!scannerRef.current) return;
 
-    Quagga.onDetected((result) => {
-      const code = result.codeResult.code;
-      if (code && code.length >= 6) {  // Basic validation
-        setBarcode(code);
-        setIsScannerActive(false);
-        Quagga.stop();
-      }
-    });
+    codeReader.current
+      .decodeFromVideoDevice(null, scannerRef.current, (result, err) => {
+        if (result) {
+          setBarcode(result.getText());
+          setIsScannerActive(false);
+          codeReader.current.reset(); // Stop the scanner
+        } else if (err && !(err instanceof ZXing.NotFoundException)) {
+          console.error(err);
+        }
+      })
+      .catch((err) => {
+        console.error('ZXing init failed:', err);
+        setError('Failed to initialize scanner. Please check camera permissions.');
+      });
   };
 
   const resetScanner = () => {
@@ -124,7 +87,7 @@ const BarcodeScanner = () => {
   useEffect(() => {
     startScanner();
     return () => {
-      Quagga.stop();
+      codeReader.current.reset(); // Stop scanning on unmount
     };
   }, []);
 
