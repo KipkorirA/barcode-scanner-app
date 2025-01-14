@@ -5,6 +5,7 @@ import ProductCard from './ProductCard';
 import ScannerControlButtons from './ScannerControlButtons';
 import { Alert, AlertDescription } from '../ui/Alert';
 import { Html5QrcodeScanner, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+import PropTypes from 'prop-types';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -12,7 +13,8 @@ class ErrorBoundary extends React.Component {
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error) {
+
+  static getDerivedStateFromError() {
     return { hasError: true };
   }
 
@@ -22,11 +24,15 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      return <h1>Something went wrong. Please refresh the page.</h1>;
+      return <h1 className="text-2xl font-bold text-red-600 text-center p-4 bg-red-100 rounded-lg shadow-md">Something went wrong. Please refresh the page.</h1>;
     }
     return this.props.children;
   }
 }
+
+ErrorBoundary.propTypes = {
+  children: PropTypes.node.isRequired,
+};
 
 const BarcodeScanner = () => {
   const [barcode, setBarcode] = useState('');
@@ -40,19 +46,17 @@ const BarcodeScanner = () => {
   const qrCodeScannerRef = useRef(null);
 
   const API_KEY = import.meta.env.VITE_APP_API_KEY || 'default-api-key';
-  const API_BASE_URL = 'https://api.airtable.com/v0/appJwvb3ld1PgjbVj';  // Fixed to Airtable API base URL
-  const TABLE_ID = 'tblRb8tVYVmjyY2Tq';  // Table ID for Clean_Tags
-  const BARCODE_FIELD_ID = 'fldBARCODE';  // Replace with the actual field ID for barcode
+  const API_BASE_URL = 'https://api.airtable.com/v0/appJwvb3ld1PgjbVj';
+  const TABLE_ID = 'tblRb8tVYVmjyY2Tq';
+  const BARCODE_FIELD_ID = 'fldBARCODE';
 
   const fetchProductDetails = useCallback(async (barcodeValue) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Build the Airtable API URL using table ID and field ID
       const url = `${API_BASE_URL}/${TABLE_ID}?filterByFormula=${encodeURIComponent(`{${BARCODE_FIELD_ID}}="${barcodeValue}"`)}`;
 
-      // Make the API request
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${API_KEY}`,
@@ -96,7 +100,7 @@ const BarcodeScanner = () => {
         {
           fps: 5,
           qrbox: 250,
-          supportedScanTypes: [Html5QrcodeSupportedFormats.QR_CODE], // Adjusted format to QR_CODE for compatibility
+          supportedScanTypes: [Html5QrcodeSupportedFormats.QR_CODE],
         },
         false
       );
@@ -149,9 +153,9 @@ const BarcodeScanner = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto p-4 space-y-4">
+    <div className="max-w-md mx-auto p-6 space-y-6 bg-white rounded-xl shadow-lg">
       <div className="text-center">
-        <h1 className="text-2xl font-bold mb-4">Barcode Scanner</h1>
+        <h1 className="text-3xl font-bold mb-6 text-gray-800 tracking-tight">Barcode Scanner</h1>
         {!isLoading && !productDetails && (
           <ScannerUI
             isScannerActive={isScannerActive}
@@ -162,26 +166,30 @@ const BarcodeScanner = () => {
       </div>
 
       {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+        <Alert variant="destructive" className="border-2 border-red-200">
+          <AlertDescription className="font-medium">{error}</AlertDescription>
         </Alert>
       )}
 
       {isLoading ? (
-        <div className="flex justify-center p-4" aria-label="Loading">
+        <div className="flex justify-center p-6 bg-gray-50 rounded-lg" aria-label="Loading">
           <Circles color="#3b82f6" height={60} width={60} />
         </div>
       ) : (
         <>
           {barcode && !isScannerActive && (
-            <ScannerControlButtons onReset={handleReset} />
+            <div className="transition-all duration-300 ease-in-out">
+              <ScannerControlButtons onReset={handleReset} />
+            </div>
           )}
           {productDetails ? (
-            <ProductCard product={productDetails} />
+            <div className="transition-all duration-300 ease-in-out">
+              <ProductCard product={productDetails} />
+            </div>
           ) : (
             barcode && (
-              <Alert>
-                <AlertDescription>
+              <Alert className="bg-blue-50 border border-blue-200">
+                <AlertDescription className="text-blue-700 font-medium">
                   No product found for barcode: {barcode}
                 </AlertDescription>
               </Alert>
@@ -190,7 +198,11 @@ const BarcodeScanner = () => {
         </>
       )}
 
-      <div id="scanner-container" ref={scannerContainerRef}></div>
+      <div 
+        id="scanner-container" 
+        ref={scannerContainerRef}
+        className="mt-6 rounded-lg overflow-hidden shadow-inner bg-gray-50"
+      ></div>
     </div>
   );
 };
@@ -198,7 +210,9 @@ const BarcodeScanner = () => {
 export default function App() {
   return (
     <ErrorBoundary>
-      <BarcodeScanner />
+      <div className="min-h-screen bg-gray-100 py-8 flex items-center justify-center">
+        <BarcodeScanner />
+      </div>
     </ErrorBoundary>
   );
 }
