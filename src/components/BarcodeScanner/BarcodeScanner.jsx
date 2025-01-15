@@ -40,9 +40,11 @@ const BarcodeScanner = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isScannerActive, setIsScannerActive] = useState(false);
   const [scanStatus, setScanStatus] = useState('');
+  const [lastScannedTime, setLastScannedTime] = useState(0);
 
   const scannerContainerRef = useRef(null);
   const qrCodeScannerRef = useRef(null);
+  const abortControllerRef = useRef(null);
 
   const API_KEY = import.meta.env.VITE_APP_API_KEY || 'default-api-key';
   const API_BASE_URL = 'https://api.airtable.com/v0/appJwvb3ld1PgjbVj';
@@ -50,21 +52,24 @@ const BarcodeScanner = () => {
   const BARCODE_FIELD_ID = 'fldBARCODE';
 
   const fetchProductDetails = useCallback(async (barcodeValue) => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     setIsLoading(true);
     setError(null);
   
     try {
-      // Wrap the barcodeValue in double quotes and escape them properly
-      const formula = `{${BARCODE_FIELD_ID}} = "${barcodeValue}"`;
+      const formula = `{${BARCODE_FIELD_ID}} = "${barcodeValue.trim()}"`;
       const url = `${API_BASE_URL}/${TABLE_ID}?filterByFormula=${encodeURIComponent(formula)}`;
-  
-      console.log('Generated URL:', url); // Debugging
   
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${API_KEY}`,
           'Content-Type': 'application/json',
         },
+        signal: abortControllerRef.current.signal,
         cache: 'no-cache',
       });
   
@@ -81,13 +86,16 @@ const BarcodeScanner = () => {
         setError('Product not found in database.');
       }
     } catch (fetchError) {
+      if (fetchError.name === 'AbortError') {
+        console.log('Fetch aborted');
+        return;
+      }
       setError(`Failed to fetch product details: ${fetchError.message}`);
       console.error('Fetch error:', fetchError);
     } finally {
       setIsLoading(false);
     }
   }, [API_KEY]);
-  
   
   const startScanner = useCallback(() => {
     if (isScannerActive || barcode) return;
@@ -105,21 +113,38 @@ const BarcodeScanner = () => {
       qrCodeScannerRef.current = new Html5QrcodeScanner(
         'scanner-container',
         {
-          fps: 10,
-          qrbox: { width: 300, height: 300 },
-          supportedScanTypes: [Html5QrcodeSupportedFormats.QR_CODE],
+          fps: 30,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.CODE_128
+          ],
           showTorchButtonIfSupported: true,
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+          }
         },
         false
       );
 
       qrCodeScannerRef.current.render(
         (decodedText) => {
-          if (!barcode) {
+          const currentTime = Date.now();
+          if (!barcode && currentTime - lastScannedTime > 2000) {
+            setLastScannedTime(currentTime);
             setBarcode(decodedText);
             fetchProductDetails(decodedText);
             setScanStatus('Barcode detected!');
-            navigator.vibrate && navigator.vibrate(200);
+            if (navigator.vibrate) {
+              navigator.vibrate([100, 50, 100]);
+            }
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification('Barcode Scanned', {
+                body: `Scanned barcode: ${decodedText}`,
+                icon: '/icon.png'
+              });
+            }
           }
         },
         (scanError) => {
@@ -131,7 +156,7 @@ const BarcodeScanner = () => {
       setError(`Failed to initialize scanner: ${err.message}`);
       console.error('Scanner initialization failed:', err);
     }
-  }, [barcode, fetchProductDetails, isScannerActive]);
+  }, [barcode, fetchProductDetails, isScannerActive, lastScannedTime]);
 
   const resetScanner = useCallback(() => {
     setBarcode('');
@@ -139,6 +164,7 @@ const BarcodeScanner = () => {
     setError(null);
     setScanStatus('');
     setIsScannerActive(false);
+    setLastScannedTime(0);
 
     if (qrCodeScannerRef.current) {
       qrCodeScannerRef.current.clear().catch((clearError) => {
@@ -147,12 +173,19 @@ const BarcodeScanner = () => {
       });
       qrCodeScannerRef.current = null;
     }
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
   }, []);
 
   useEffect(() => {
     return () => {
       if (qrCodeScannerRef.current) {
         qrCodeScannerRef.current.clear().catch(console.error);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
     };
   }, []);
