@@ -111,8 +111,6 @@ const BarcodeScanner = () => {
         scannedBarcodes.current.add(decodedText);
         setLastScannedTime(currentTime);
         setBarcode(decodedText);
-
-
         setScanStatus(`Barcode detected: ${decodedText}`);
         if (navigator.vibrate) {
           navigator.vibrate(100);
