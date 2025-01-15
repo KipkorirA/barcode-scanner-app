@@ -3,7 +3,7 @@ import ScannerUI from './ScannerUI';
 import ProductCard from './ProductCard';
 import { Alert, AlertDescription } from '../ui/Alert';
 import PropTypes from 'prop-types';
-import * as ZXing from '@zxing/library';
+import { Html5QrcodeScanner } from 'html5-qrcode';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -39,9 +39,8 @@ const BarcodeScanner = () => {
   const [scanStatus, setScanStatus] = useState('');
   const [lastScannedTime, setLastScannedTime] = useState(0);
 
-  const videoRef = useRef(null);
+  const scannerRef = useRef(null);
   const abortControllerRef = useRef(null);
-  const codeReaderRef = useRef(null);
   const scannedBarcodes = useRef(new Set());
 
   const API_KEY = import.meta.env.VITE_APP_API_KEY || 'default-api-key';
@@ -57,6 +56,9 @@ const BarcodeScanner = () => {
     setIsScannerActive(false);
     setScanStatus('');
     scannedBarcodes.current.clear();
+    if (scannerRef.current) {
+      scannerRef.current.clear();
+    }
   }, []);
 
   const fetchProductDetails = useCallback(async (barcodeValue) => {
@@ -102,23 +104,20 @@ const BarcodeScanner = () => {
     }
   }, [API_KEY]);
 
-  const handleBarcodeDetection = useCallback((result) => {
-    if (result) {
-      const decodedText = result.text;
-      const currentTime = Date.now();
+  const handleBarcodeDetection = useCallback((decodedText) => {
+    const currentTime = Date.now();
 
-      if (!scannedBarcodes.current.has(decodedText) && currentTime - lastScannedTime > SCAN_COOLDOWN) {
-        scannedBarcodes.current.add(decodedText);
-        setLastScannedTime(currentTime);
-        setBarcode(decodedText);
-        setScanStatus(`Barcode detected: ${decodedText}`);
-        if (navigator.vibrate) {
-          navigator.vibrate(100);
-        }
-        setTimeout(() => {
-          fetchProductDetails(decodedText);
-        }, 1000);
+    if (!scannedBarcodes.current.has(decodedText) && currentTime - lastScannedTime > SCAN_COOLDOWN) {
+      scannedBarcodes.current.add(decodedText);
+      setLastScannedTime(currentTime);
+      setBarcode(decodedText);
+      setScanStatus(`Barcode detected: ${decodedText}`);
+      if (navigator.vibrate) {
+        navigator.vibrate(100);
       }
+      setTimeout(() => {
+        fetchProductDetails(decodedText);
+      }, 1000);
     }
   }, [fetchProductDetails, lastScannedTime, SCAN_COOLDOWN]);
 
@@ -129,69 +128,38 @@ const BarcodeScanner = () => {
     setError(null);
     setScanStatus('Initializing camera...');
 
-    navigator.mediaDevices
-      .getUserMedia({
-        video: {
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          frameRate: { ideal: 30 }
-        },
-      })
-      .then((stream) => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play();
-          setScanStatus('Scanning for barcodes...');
-        }
+    const html5QrcodeScanner = new Html5QrcodeScanner(
+      "reader",
+      { 
+        fps: 10,
+        qrbox: { width: 250, height: 150 },
+        aspectRatio: 1.0,
+        showTorchButtonIfSupported: true,
+        showZoomSliderIfSupported: true
+      },
+      false
+    );
 
-        if ('BarcodeDetector' in window) {
-          const nativeBarcodeDetector = new window.BarcodeDetector({ formats: ['code_128', 'code_39', 'code_93', 'codabar', 'ean_13', 'ean_8', 'itf', 'upc_a', 'upc_e'] });
-          const detectBarcodes = () => {
-            if (!videoRef.current || !isScannerActive) return;
-            
-            nativeBarcodeDetector
-              .detect(videoRef.current)
-              .then((barcodes) => {
-                if (barcodes.length > 0) {
-                  handleBarcodeDetection({ text: barcodes[0].rawValue });
-                }
-                if (isScannerActive) requestAnimationFrame(detectBarcodes);
-              })
-              .catch((err) => console.error('Barcode detection error:', err));
-          };
-          requestAnimationFrame(detectBarcodes);
-        } else {
-          const hints = new Map();
-          hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-          hints.set(ZXing.DecodeHintType.ASSUME_GS1, false);
-          
-          codeReaderRef.current = new ZXing.BrowserMultiFormatReader(hints);
-          codeReaderRef.current.timeBetweenDecodingAttempts = 50;
-          codeReaderRef.current.decodeFromVideoElement(videoRef.current, handleBarcodeDetection);
-        }
-      })
-      .catch((err) => {
-        setError(`Failed to initialize camera: ${err.message}`);
-        console.error('Camera error:', err);
-        setIsScannerActive(false);
-      });
+    html5QrcodeScanner.render((decodedText) => {
+      handleBarcodeDetection(decodedText);
+    }, (error) => {
+      console.warn(`Code scan error = ${error}`);
+    });
+
+    scannerRef.current = html5QrcodeScanner;
+    setScanStatus('Scanning for barcodes...');
   }, [barcode, handleBarcodeDetection, isScannerActive]);
 
   const pauseScanner = () => {
     setIsScannerActive(false);
-    if (videoRef.current && videoRef.current.srcObject) {
-      const tracks = videoRef.current.srcObject.getTracks();
-      tracks.forEach((track) => track.stop());
+    if (scannerRef.current) {
+      scannerRef.current.clear();
     }
   };
 
   useEffect(() => {
     return () => {
       pauseScanner();
-      if (codeReaderRef.current) {
-        codeReaderRef.current.reset();
-      }
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
@@ -227,21 +195,7 @@ const BarcodeScanner = () => {
 
       {barcode && productDetails && <ProductCard product={productDetails} />}
 
-      <div className="relative">
-        <video 
-          ref={videoRef} 
-          className="w-full rounded-xl shadow-lg" 
-          muted 
-          playsInline 
-          style={{ display: isScannerActive ? 'block' : 'none' }}
-        />
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-          <div className="w-64 h-20 border-2 border-red-500 rounded-lg">
-            <div className="absolute top-0 left-1/2 w-20 h-1 bg-red-500 transform -translate-x-1/2"></div>
-            <div className="absolute bottom-0 left-1/2 w-20 h-1 bg-red-500 transform -translate-x-1/2"></div>
-          </div>
-        </div>
-      </div>
+      <div id="reader" className="w-full"></div>
     </div>
   );
 };
