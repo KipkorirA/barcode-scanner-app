@@ -3,7 +3,7 @@ import ScannerUI from './ScannerUI';
 import ProductCard from './ProductCard';
 import { Alert, AlertDescription } from '../ui/Alert';
 import PropTypes from 'prop-types';
-import * as BarcodeDetector from '@zxing/library'; 
+import * as ZXing from '@zxing/library';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -41,11 +41,23 @@ const BarcodeScanner = () => {
 
   const videoRef = useRef(null);
   const abortControllerRef = useRef(null);
+  const codeReaderRef = useRef(null);
+  const scannedBarcodes = useRef(new Set());
 
   const API_KEY = import.meta.env.VITE_APP_API_KEY || 'default-api-key';
   const API_BASE_URL = 'https://api.airtable.com/v0/appJwvb3ld1PgjbVj';
   const TABLE_ID = 'tblRb8tVYVmjyY2Tq';
   const BARCODE_FIELD_ID = 'fldg7ScmPnlhg1MJX';
+  const SCAN_COOLDOWN = 2000;
+
+  const resetScanner = useCallback(() => {
+    setBarcode('');
+    setProductDetails(null);
+    setError(null);
+    setIsScannerActive(false);
+    setScanStatus('');
+    scannedBarcodes.current.clear();
+  }, []);
 
   const fetchProductDetails = useCallback(async (barcodeValue) => {
     if (abortControllerRef.current) {
@@ -90,6 +102,24 @@ const BarcodeScanner = () => {
     }
   }, [API_KEY]);
 
+  const handleBarcodeDetection = useCallback((result) => {
+    if (result) {
+      const decodedText = result.text;
+      const currentTime = Date.now();
+
+      if (!scannedBarcodes.current.has(decodedText) && currentTime - lastScannedTime > SCAN_COOLDOWN) {
+        scannedBarcodes.current.add(decodedText);
+        setLastScannedTime(currentTime);
+        setBarcode(decodedText);
+        fetchProductDetails(decodedText);
+        setScanStatus('Barcode detected!');
+        if (navigator.vibrate) {
+          navigator.vibrate([100, 50, 100]);
+        }
+      }
+    }
+  }, [fetchProductDetails, lastScannedTime, SCAN_COOLDOWN]);
+
   const startScanner = useCallback(() => {
     if (isScannerActive || barcode) return;
 
@@ -98,7 +128,13 @@ const BarcodeScanner = () => {
     setScanStatus('Initializing camera...');
 
     navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: 'environment' } })
+      .getUserMedia({
+        video: {
+          facingMode: 'environment',
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+        },
+      })
       .then((stream) => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -106,36 +142,45 @@ const BarcodeScanner = () => {
           setScanStatus('Scanning for barcodes...');
         }
 
-        const codeReader = new BarcodeDetector.BrowserMultiFormatReader();
-
-        codeReader.decodeFromVideoElement(videoRef.current, (result) => {
-          if (result) {
-            const decodedText = result.text;
-            const currentTime = Date.now();
-            if (!barcode && currentTime - lastScannedTime > 2000) {
-              setLastScannedTime(currentTime);
-              setBarcode(decodedText);
-              fetchProductDetails(decodedText);
-              setScanStatus('Barcode detected!');
-              if (navigator.vibrate) {
-                navigator.vibrate([100, 50, 100]);
-              }
-            }
-          }
-        });
+        if ('BarcodeDetector' in window) {
+          const nativeBarcodeDetector = new window.BarcodeDetector({ formats: ['code_128'] });
+          const detectBarcodes = () => {
+            nativeBarcodeDetector
+              .detect(videoRef.current)
+              .then((barcodes) => {
+                if (barcodes.length > 0) {
+                  handleBarcodeDetection({ text: barcodes[0].rawValue });
+                }
+              })
+              .catch((err) => console.error('Barcode detection error:', err));
+            if (isScannerActive) requestAnimationFrame(detectBarcodes);
+          };
+          detectBarcodes();
+        } else {
+          codeReaderRef.current = new ZXing.BrowserMultiFormatReader();
+          codeReaderRef.current.decodeFromVideoElement(videoRef.current, handleBarcodeDetection);
+        }
       })
       .catch((err) => {
         setError(`Failed to initialize camera: ${err.message}`);
         console.error('Camera error:', err);
+        setIsScannerActive(false);
       });
-  }, [barcode, fetchProductDetails, isScannerActive, lastScannedTime]);
+  }, [barcode, handleBarcodeDetection, isScannerActive]);
+
+  const pauseScanner = () => {
+    setIsScannerActive(false);
+    if (videoRef.current && videoRef.current.srcObject) {
+      const tracks = videoRef.current.srcObject.getTracks();
+      tracks.forEach((track) => track.stop());
+    }
+  };
 
   useEffect(() => {
-    const video = videoRef.current;
     return () => {
-      if (video && video.srcObject) {
-        const tracks = video.srcObject.getTracks();
-        tracks.forEach((track) => track.stop());
+      pauseScanner();
+      if (codeReaderRef.current) {
+        codeReaderRef.current.reset();
       }
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
@@ -147,7 +192,15 @@ const BarcodeScanner = () => {
     <div className="max-w-md mx-auto p-4 space-y-3 bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-2xl border border-gray-100 backdrop-blur-sm transition-all duration-300 hover:shadow-xl">
       <div className="text-center">
         <h1 className="text-4xl font-extrabold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent tracking-tight">Barcode Scanner</h1>
-        <ScannerUI isScannerActive={isScannerActive} scanStatus={scanStatus} startScanner={startScanner} />
+        <ScannerUI 
+          isScannerActive={isScannerActive} 
+          scanStatus={scanStatus} 
+          startScanner={startScanner}
+          resetScanner={resetScanner}
+        />
+        <button onClick={pauseScanner} className="bg-red-500 text-white px-4 py-2 rounded">
+          Pause Scanner
+        </button>
       </div>
 
       {error && (
@@ -158,17 +211,15 @@ const BarcodeScanner = () => {
 
       {barcode && productDetails && <ProductCard product={productDetails} />}
 
-      <video ref={videoRef} className="w-full rounded-xl shadow-lg" muted playsInline />
+      <video 
+        ref={videoRef} 
+        className="w-full rounded-xl shadow-lg" 
+        muted 
+        playsInline 
+        style={{ display: isScannerActive ? 'block' : 'none' }}
+      />
     </div>
   );
 };
 
-export default function App() {
-  return (
-    <ErrorBoundary>
-      <div className="min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-white py-4 flex items-center justify-center">
-        <BarcodeScanner />
-      </div>
-    </ErrorBoundary>
-  );
-}
+export default BarcodeScanner;
