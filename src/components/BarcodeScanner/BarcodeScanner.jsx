@@ -114,7 +114,7 @@ const BarcodeScanner = () => {
         fetchProductDetails(decodedText);
         setScanStatus('Barcode detected!');
         if (navigator.vibrate) {
-          navigator.vibrate(100); // Simplified vibration pattern
+          navigator.vibrate([100, 50, 100]); // Vibrate pattern: 100ms on, 50ms off, 100ms on
         }
       }
     }
