@@ -171,5 +171,4 @@ export default function App() {
       </div>
     </ErrorBoundary>
   );
-
 }
