@@ -111,11 +111,15 @@ const BarcodeScanner = () => {
         scannedBarcodes.current.add(decodedText);
         setLastScannedTime(currentTime);
         setBarcode(decodedText);
-        fetchProductDetails(decodedText);
-        setScanStatus('Barcode detected!');
+
+
+        setScanStatus(`Barcode detected: ${decodedText}`);
         if (navigator.vibrate) {
           navigator.vibrate(100);
         }
+        setTimeout(() => {
+          fetchProductDetails(decodedText);
+        }, 1000);
       }
     }
   }, [fetchProductDetails, lastScannedTime, SCAN_COOLDOWN]);
@@ -210,6 +214,12 @@ const BarcodeScanner = () => {
           Pause Scanner
         </button>
       </div>
+
+      {barcode && (
+        <Alert className="border-2 border-blue-200">
+          <AlertDescription className="font-medium">Scanned Barcode: {barcode}</AlertDescription>
+        </Alert>
+      )}
 
       {error && (
         <Alert variant="destructive" className="border-2 border-red-200 animate-pulse">
