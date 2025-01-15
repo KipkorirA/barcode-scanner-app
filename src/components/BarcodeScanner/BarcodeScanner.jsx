@@ -117,11 +117,7 @@ const BarcodeScanner = () => {
           qrbox: { width: 250, height: 250 },
           aspectRatio: 1.0,
           formatsToSupport: [
-            Html5QrcodeSupportedFormats.EAN_13,
             Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.CODE_39,
-            Html5QrcodeSupportedFormats.CODE_93,
-            Html5QrcodeSupportedFormats.ITF,
           ],
           showTorchButtonIfSupported: true,
           experimentalFeatures: {
