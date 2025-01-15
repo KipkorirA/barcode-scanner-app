@@ -3,7 +3,7 @@ import ScannerUI from './ScannerUI';
 import ProductCard from './ProductCard';
 import { Alert, AlertDescription } from '../ui/Alert';
 import PropTypes from 'prop-types';
-import * as BarcodeDetector from '@zxing/library'; // ZXing as a fallback for web
+import * as BarcodeDetector from '@zxing/library'; 
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
