@@ -146,7 +146,7 @@ const BarcodeScanner = () => {
         }
 
         if ('BarcodeDetector' in window) {
-          const nativeBarcodeDetector = new window.BarcodeDetector({ formats: ['code_128'] });
+          const nativeBarcodeDetector = new window.BarcodeDetector({ formats: ['code_128', 'code_39', 'code_93', 'codabar', 'ean_13', 'ean_8', 'itf', 'upc_a', 'upc_e'] });
           const detectBarcodes = () => {
             if (!videoRef.current || !isScannerActive) return;
             
