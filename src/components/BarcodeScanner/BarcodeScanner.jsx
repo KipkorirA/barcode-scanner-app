@@ -49,7 +49,7 @@ const BarcodeScanner = () => {
   const API_KEY = import.meta.env.VITE_APP_API_KEY || 'default-api-key';
   const API_BASE_URL = 'https://api.airtable.com/v0/appJwvb3ld1PgjbVj';
   const TABLE_ID = 'tblRb8tVYVmjyY2Tq';
-  const BARCODE_FIELD_ID = 'fldBARCODE';
+  const BARCODE_FIELD_ID = 'fldg7ScmPnlhg1MJX';
 
   const fetchProductDetails = useCallback(async (barcodeValue) => {
     if (abortControllerRef.current) {
@@ -118,7 +118,19 @@ const BarcodeScanner = () => {
           aspectRatio: 1.0,
           formatsToSupport: [
             Html5QrcodeSupportedFormats.EAN_13,
-            Html5QrcodeSupportedFormats.CODE_128
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.CODE_93,
+            Html5QrcodeSupportedFormats.CODE_25,
+            Html5QrcodeSupportedFormats.IT,
+            Html5QrcodeSupportedFormats.CODABAR,
+            Html5QrcodeSupportedFormats.CODE_11,
+            Html5QrcodeSupportedFormats.MSI,
+            Html5QrcodeSupportedFormats.PLESSEY,
+            
           ],
           showTorchButtonIfSupported: true,
           experimentalFeatures: {
