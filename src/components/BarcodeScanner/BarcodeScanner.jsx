@@ -1,8 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Circles } from 'react-loader-spinner';
 import ScannerUI from './ScannerUI';
 import ProductCard from './ProductCard';
-import ScannerControlButtons from './ScannerControlButtons';
 import { Alert, AlertDescription } from '../ui/Alert';
 import PropTypes from 'prop-types';
 import * as BarcodeDetector from '@zxing/library'; // ZXing as a fallback for web
@@ -37,12 +35,10 @@ const BarcodeScanner = () => {
   const [barcode, setBarcode] = useState('');
   const [productDetails, setProductDetails] = useState(null);
   const [error, setError] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [isScannerActive, setIsScannerActive] = useState(false);
   const [scanStatus, setScanStatus] = useState('');
   const [lastScannedTime, setLastScannedTime] = useState(0);
 
-  const scannerContainerRef = useRef(null);
   const videoRef = useRef(null);
   const abortControllerRef = useRef(null);
 
@@ -57,7 +53,6 @@ const BarcodeScanner = () => {
     }
     abortControllerRef.current = new AbortController();
 
-    setIsLoading(true);
     setError(null);
 
     try {
@@ -92,8 +87,6 @@ const BarcodeScanner = () => {
       }
       setError(`Failed to fetch product details: ${fetchError.message}`);
       console.error('Fetch error:', fetchError);
-    } finally {
-      setIsLoading(false);
     }
   }, [API_KEY]);
 
@@ -110,6 +103,7 @@ const BarcodeScanner = () => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.play();
+          setScanStatus('Scanning for barcodes...');
         }
 
         const codeReader = new BarcodeDetector.BrowserMultiFormatReader();
@@ -136,28 +130,11 @@ const BarcodeScanner = () => {
       });
   }, [barcode, fetchProductDetails, isScannerActive, lastScannedTime]);
 
-  const resetScanner = useCallback(() => {
-    setBarcode('');
-    setProductDetails(null);
-    setError(null);
-    setScanStatus('');
-    setIsScannerActive(false);
-    setLastScannedTime(0);
-
-    if (videoRef.current && videoRef.current.srcObject) {
-      const tracks = videoRef.current.srcObject.getTracks();
-      tracks.forEach((track) => track.stop());
-    }
-
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-  }, []);
-
   useEffect(() => {
+    const video = videoRef.current;
     return () => {
-      if (videoRef.current && videoRef.current.srcObject) {
-        const tracks = videoRef.current.srcObject.getTracks();
+      if (video && video.srcObject) {
+        const tracks = video.srcObject.getTracks();
         tracks.forEach((track) => track.stop());
       }
       if (abortControllerRef.current) {
@@ -194,4 +171,5 @@ export default function App() {
       </div>
     </ErrorBoundary>
   );
+
 }
