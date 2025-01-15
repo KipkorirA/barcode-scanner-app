@@ -48,7 +48,7 @@ const BarcodeScanner = () => {
   const API_BASE_URL = 'https://api.airtable.com/v0/appJwvb3ld1PgjbVj';
   const TABLE_ID = 'tblRb8tVYVmjyY2Tq';
   const BARCODE_FIELD_ID = 'fldg7ScmPnlhg1MJX';
-  const SCAN_COOLDOWN = 2000;
+  const SCAN_COOLDOWN = 1000; // Reduced cooldown time
 
   const resetScanner = useCallback(() => {
     setBarcode('');
@@ -114,7 +114,7 @@ const BarcodeScanner = () => {
         fetchProductDetails(decodedText);
         setScanStatus('Barcode detected!');
         if (navigator.vibrate) {
-          navigator.vibrate([100, 50, 100]);
+          navigator.vibrate(100); // Simplified vibration pattern
         }
       }
     }
@@ -131,8 +131,9 @@ const BarcodeScanner = () => {
       .getUserMedia({
         video: {
           facingMode: 'environment',
-          width: { ideal: 640 },
-          height: { ideal: 480 },
+          width: { ideal: 1280 }, // Increased resolution
+          height: { ideal: 720 },
+          frameRate: { ideal: 30 } // Specified frame rate
         },
       })
       .then((stream) => {
@@ -145,19 +146,26 @@ const BarcodeScanner = () => {
         if ('BarcodeDetector' in window) {
           const nativeBarcodeDetector = new window.BarcodeDetector({ formats: ['code_128'] });
           const detectBarcodes = () => {
+            if (!videoRef.current || !isScannerActive) return;
+            
             nativeBarcodeDetector
               .detect(videoRef.current)
               .then((barcodes) => {
                 if (barcodes.length > 0) {
                   handleBarcodeDetection({ text: barcodes[0].rawValue });
                 }
+                if (isScannerActive) requestAnimationFrame(detectBarcodes);
               })
               .catch((err) => console.error('Barcode detection error:', err));
-            if (isScannerActive) requestAnimationFrame(detectBarcodes);
           };
-          detectBarcodes();
+          requestAnimationFrame(detectBarcodes);
         } else {
-          codeReaderRef.current = new ZXing.BrowserMultiFormatReader();
+          const hints = new Map();
+          hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+          hints.set(ZXing.DecodeHintType.ASSUME_GS1, false);
+          
+          codeReaderRef.current = new ZXing.BrowserMultiFormatReader(hints);
+          codeReaderRef.current.timeBetweenDecodingAttempts = 50; // Reduced time between attempts
           codeReaderRef.current.decodeFromVideoElement(videoRef.current, handleBarcodeDetection);
         }
       })
