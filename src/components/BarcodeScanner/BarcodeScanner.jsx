@@ -169,15 +169,9 @@ const BarcodeScanner = () => {
               startScanner={startScanner}
             />
             {isScannerActive && (
-              <>
-                <div className="mt-4 text-lg font-semibold text-indigo-600">
-                  {scanStatus}
-                </div>
-                <div className="mt-2 text-sm text-gray-600">
-                  Place the barcode in the center of the camera view
-                </div>
-                <div className="mt-2 h-1 bg-indigo-600 rounded-full animate-[scan_1.5s_ease-in-out_infinite]"></div>
-              </>
+              <div className="mt-4 text-lg font-semibold text-indigo-600 animate-pulse">
+                {scanStatus}
+              </div>
             )}
           </>
         )}
