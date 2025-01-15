@@ -118,19 +118,18 @@ const BarcodeScanner = () => {
           aspectRatio: 1.0,
           formatsToSupport: [
             Html5QrcodeSupportedFormats.EAN_13,
-            Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.QR_CODE,
-            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.EAN_8,
             Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.CODE_128,
             Html5QrcodeSupportedFormats.CODE_39,
             Html5QrcodeSupportedFormats.CODE_93,
-            Html5QrcodeSupportedFormats.CODE_25,
-            Html5QrcodeSupportedFormats.IT,
             Html5QrcodeSupportedFormats.CODABAR,
-            Html5QrcodeSupportedFormats.CODE_11,
-            Html5QrcodeSupportedFormats.MSI,
-            Html5QrcodeSupportedFormats.PLESSEY,
-            
+            Html5QrcodeSupportedFormats.ITF,
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.DATA_MATRIX,
+            Html5QrcodeSupportedFormats.AZTEC,
+            Html5QrcodeSupportedFormats.PDF_417
           ],
           showTorchButtonIfSupported: true,
           experimentalFeatures: {
