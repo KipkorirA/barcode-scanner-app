@@ -48,7 +48,7 @@ const BarcodeScanner = () => {
   const API_BASE_URL = 'https://api.airtable.com/v0/appJwvb3ld1PgjbVj';
   const TABLE_ID = 'tblRb8tVYVmjyY2Tq';
   const BARCODE_FIELD_ID = 'fldg7ScmPnlhg1MJX';
-  const SCAN_COOLDOWN = 1000; // Reduced cooldown time
+  const SCAN_COOLDOWN = 400; // Reduced cooldown time
 
   const resetScanner = useCallback(() => {
     setBarcode('');
