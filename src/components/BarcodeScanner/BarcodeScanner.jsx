@@ -175,6 +175,9 @@ const BarcodeScanner = () => {
           </h1>
           
           <div className="relative">
+            <div className="text-center mb-4 text-teal-600 font-semibold">
+              Please place the barcode within the scanning area below
+            </div>
             <div id="reader" className="w-full rounded-2xl overflow-hidden shadow-lg border-4 border-teal-200 transition-all duration-300 hover:border-teal-300"></div>
             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none rounded-2xl"></div>
           </div>
