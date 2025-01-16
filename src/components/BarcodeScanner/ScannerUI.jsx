@@ -1,34 +1,26 @@
-import { useRef } from 'react';
 import { Camera } from 'lucide-react';
 import PropTypes from 'prop-types';
 
 const ScannerUI = ({ isScannerActive, scanStatus, startScanner }) => {
-  const scannerRef = useRef(null);
-
   return (
-    <div className="w-full min-h-screen flex items-center justify-center">
-      <div className="w-full max-w-sm mx-auto px-4">
+    <div className="w-full min-h-[300px] flex items-center justify-center bg-gray-50 rounded-xl p-6">
+      <div className="w-full max-w-sm mx-auto">
         {isScannerActive ? (
           <div className="relative">
-            <video
-              ref={scannerRef}
-              className="w-full aspect-video bg-gray-900 rounded-lg overflow-hidden shadow-lg"
-              autoPlay
-              muted
-              playsInline
-            />
-            <div className="absolute inset-0 border-2 border-blue-500 opacity-50 pointer-events-none" />
+            <div className="absolute inset-0 border-4 border-blue-500/50 rounded-lg animate-pulse opacity-75 pointer-events-none" />
             {scanStatus && (
-              <div className="mt-2 text-lg font-medium text-center text-gray-700">{scanStatus}</div>
+              <div className="mt-4 text-lg font-semibold text-center text-gray-800 bg-white/90 py-2 px-4 rounded-md shadow-sm">
+                {scanStatus}
+              </div>
             )}
           </div>
         ) : (
           <button
             onClick={startScanner}
-            className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors shadow-md"
+            className="w-full flex items-center justify-center gap-3 py-4 px-6 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 active:bg-blue-800 transition-all duration-200 shadow-lg hover:shadow-blue-200"
             aria-label="Start barcode scanner"
           >
-            <Camera className="w-5 h-5" />
+            <Camera className="w-6 h-6" />
             Start Scanning
           </button>
         )}
