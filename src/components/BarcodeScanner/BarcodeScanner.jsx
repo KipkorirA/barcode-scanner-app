@@ -170,32 +170,33 @@ const BarcodeScanner = () => {
     <div className="max-w-md mx-auto p-4 space-y-3 bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-2xl border border-gray-100 backdrop-blur-sm transition-all duration-300 hover:shadow-xl">
       <div className="text-center">
         <h1 className="text-4xl font-extrabold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent tracking-tight">Barcode Scanner</h1>
+        <div id="reader" className="w-full mb-4 rounded-lg overflow-hidden shadow-lg border-4 border-blue-200"></div>
         <ScannerUI 
           isScannerActive={isScannerActive} 
           scanStatus={scanStatus} 
           startScanner={startScanner}
           resetScanner={resetScanner}
         />
-        <button onClick={pauseScanner} className="bg-red-500 text-white px-4 py-2 rounded">
+        <button onClick={pauseScanner} className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors duration-200 shadow-md">
           Pause Scanner
         </button>
       </div>
 
-      {barcode && (
-        <Alert className="border-2 border-blue-200">
-          <AlertDescription className="font-medium">Scanned Barcode: {barcode}</AlertDescription>
-        </Alert>
-      )}
+      <div className="space-y-3 mt-4">
+        {barcode && (
+          <Alert className="border-2 border-blue-200 shadow-md">
+            <AlertDescription className="font-medium">Scanned Barcode: {barcode}</AlertDescription>
+          </Alert>
+        )}
 
-      {error && (
-        <Alert variant="destructive" className="border-2 border-red-200 animate-pulse">
-          <AlertDescription className="font-medium">{error}</AlertDescription>
-        </Alert>
-      )}
+        {error && (
+          <Alert variant="destructive" className="border-2 border-red-200 animate-pulse shadow-md">
+            <AlertDescription className="font-medium">{error}</AlertDescription>
+          </Alert>
+        )}
 
-      {barcode && productDetails && <ProductCard product={productDetails} />}
-
-      <div id="reader" className="w-full"></div>
+        {barcode && productDetails && <ProductCard product={productDetails} />}
+      </div>
     </div>
   );
 };
