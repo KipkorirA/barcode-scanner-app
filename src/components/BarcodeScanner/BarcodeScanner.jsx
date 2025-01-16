@@ -182,22 +182,20 @@ const BarcodeScanner = () => {
             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none rounded-2xl"></div>
           </div>
 
-          <div className="mt-6 space-y-4">
-            <ScannerUI 
-              isScannerActive={isScannerActive} 
-              scanStatus={scanStatus} 
-              startScanner={startScanner}
-              resetScanner={resetScanner}
-            />
+          <ScannerUI 
+            isScannerActive={isScannerActive} 
+            scanStatus={scanStatus} 
+            startScanner={startScanner}
+            resetScanner={resetScanner}
+          />
             
-            <div className="flex justify-center">
-              <button 
-                onClick={pauseScanner} 
-                className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-6 py-3 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-semibold"
-              >
-                Stop Scanning
-              </button>
-            </div>
+          <div className="flex justify-center">
+            <button 
+              onClick={pauseScanner} 
+              className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-6 py-3 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-semibold"
+            >
+              Stop Scanning
+            </button>
           </div>
 
           <div className="space-y-4 mt-6">
