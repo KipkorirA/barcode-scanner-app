@@ -111,7 +111,7 @@ const BarcodeScanner = () => {
       scannedBarcodes.current.add(decodedText);
       setLastScannedTime(currentTime);
       setBarcode(decodedText);
-      setScanStatus(`Medical Item Code detected: ${decodedText}`);
+      setScanStatus(`Item Code detected: ${decodedText}`);
       if (navigator.vibrate) {
         navigator.vibrate(100);
       }
@@ -178,8 +178,16 @@ const BarcodeScanner = () => {
             <div className="text-center mb-4 text-teal-600 font-semibold">
               Please place the barcode within the scanning area below
             </div>
-            <div id="reader" className="w-full rounded-2xl overflow-hidden shadow-lg border-4 border-teal-200 transition-all duration-300 hover:border-teal-300"></div>
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none rounded-2xl"></div>
+            <div className="relative">
+              <div id="reader" className="w-full rounded-2xl overflow-hidden shadow-lg border-4 border-teal-200 transition-all duration-300 hover:border-teal-300"></div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none rounded-2xl"></div>
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                <div className="w-48 h-24 border-2 border-teal-400 rounded-lg animate-pulse"></div>
+                <div className="text-sm text-teal-600 bg-white/80 px-2 py-1 rounded mt-2 text-center">
+                  Center barcode here
+                </div>
+              </div>
+            </div>
           </div>
 
           <ScannerUI 
