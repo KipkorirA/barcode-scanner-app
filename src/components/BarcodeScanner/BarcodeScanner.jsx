@@ -45,8 +45,8 @@ const BarcodeScanner = () => {
 
   const API_KEY = import.meta.env.VITE_APP_API_KEY || 'default-api-key';
   const API_BASE_URL = 'https://api.airtable.com/v0/appJwvb3ld1PgjbVj';
-  const TABLE_ID = 'tblRb8tVYVmjyY2Tq';
-  const BARCODE_FIELD_ID = 'fldg7ScmPnlhg1MJX';
+  const TABLE_ID = 'tblz1Wi8XLNwMHRpz';
+  const BARCODE_FIELD_ID = 'fldqPTazwJiSEa9zx';
   const SCAN_COOLDOWN = 400;
 
   const resetScanner = useCallback(() => {
