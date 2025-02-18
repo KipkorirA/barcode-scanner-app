@@ -43,10 +43,15 @@ const BarcodeScanner = () => {
   const abortControllerRef = useRef(null);
   const scannedBarcodes = useRef(new Set());
 
-  const API_KEY = import.meta.env.VITE_APP_API_KEY || 'default-api-key';
-  const API_BASE_URL = 'https://api.airtable.com/v0/appJwvb3ld1PgjbVj';
-  const TABLE_ID = 'tblz1Wi8XLNwMHRpz';
-  const BARCODE_FIELD_ID = 'fldqPTazwJiSEa9zx';
+  const AIRTABLE_API_KEY = import.meta.env.VITE_AIRTABLE_API_KEY;
+  const AIRTABLE_API_URL = import.meta.env.VITE_AIRTABLE_API_URL;
+  const AIRTABLE_BASE_ID = import.meta.env.VITE_AIRTABLE_BASE_ID;
+  const AIRTABLE_TABLE_ID = import.meta.env.VITE_AIRTABLE_TABLE_ID;
+  const AIRTABLE_BARCODE_FIELD_ID = import.meta.env.VITE_AIRTABLE_BARCODE_FIELD_ID;
+  const NAVISION_API_URL = import.meta.env.VITE_NAVISION_API_URL;
+  const NAVISION_API_KEY = import.meta.env.VITE_NAVISION_API_KEY;
+  const NAV_USER = import.meta.env.VITE_NAV_USER;
+  const NAV_PASSWORD = import.meta.env.VITE_NAV_PASSWORD;
   const SCAN_COOLDOWN = 400;
 
   const resetScanner = useCallback(() => {
@@ -61,6 +66,55 @@ const BarcodeScanner = () => {
     }
   }, []);
 
+  const fetchFromNavision = useCallback(async (barcodeValue) => {
+    try {
+      const response = await fetch(`${NAVISION_API_URL}/items/${barcodeValue}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${NAVISION_API_KEY}`,
+          'Username': NAV_USER,
+          'Password': NAV_PASSWORD
+        },
+        cache: 'no-cache',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Navision HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Navision fetch error:', error);
+      return null;
+    }
+  }, [NAVISION_API_URL, NAVISION_API_KEY, NAV_USER, NAV_PASSWORD]);
+
+  const fetchFromAirtable = useCallback(async (barcodeValue) => {
+    try {
+      const formula = `{${AIRTABLE_BARCODE_FIELD_ID}} = "${barcodeValue.trim()}"`;
+      const url = `${AIRTABLE_API_URL}/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE_ID}?filterByFormula=${encodeURIComponent(formula)}`;
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-cache',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Airtable HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.records && data.records.length > 0 ? data.records[0].fields : null;
+    } catch (error) {
+      console.error('Airtable fetch error:', error);
+      return null;
+    }
+  }, [AIRTABLE_API_URL, AIRTABLE_BASE_ID, AIRTABLE_TABLE_ID, AIRTABLE_BARCODE_FIELD_ID, AIRTABLE_API_KEY]);
+
   const fetchProductDetails = useCallback(async (barcodeValue) => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -70,30 +124,23 @@ const BarcodeScanner = () => {
     setError(null);
 
     try {
-      const formula = `{${BARCODE_FIELD_ID}} = "${barcodeValue.trim()}"`;
-      const url = `${API_BASE_URL}/${TABLE_ID}?filterByFormula=${encodeURIComponent(formula)}`;
-
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        signal: abortControllerRef.current.signal,
-        cache: 'no-cache',
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // First try Navision
+      const navisionData = await fetchFromNavision(barcodeValue);
+      if (navisionData) {
+        setProductDetails(navisionData);
+        return;
       }
 
-      const data = await response.json();
-
-      if (data.records && data.records.length > 0) {
-        setProductDetails(data.records[0].fields);
-      } else {
-        setProductDetails(null);
-        setError('Product not found in database.');
+      // If Navision fails, try Airtable
+      const airtableData = await fetchFromAirtable(barcodeValue);
+      if (airtableData) {
+        setProductDetails(airtableData);
+        return;
       }
+
+      // If both fail, show error
+      setProductDetails(null);
+      setError('Product not found in either Navision or Airtable.');
     } catch (fetchError) {
       if (fetchError.name === 'AbortError') {
         console.log('Fetch aborted');
@@ -102,7 +149,7 @@ const BarcodeScanner = () => {
       setError(`Failed to fetch product details: ${fetchError.message}`);
       console.error('Fetch error:', fetchError);
     }
-  }, [API_KEY]);
+  }, [fetchFromNavision, fetchFromAirtable]);
 
   const handleBarcodeDetection = useCallback((decodedText) => {
     const currentTime = Date.now();
@@ -119,7 +166,7 @@ const BarcodeScanner = () => {
         fetchProductDetails(decodedText);
       }, 1000);
     }
-  }, [fetchProductDetails, lastScannedTime, SCAN_COOLDOWN]);
+  }, [fetchProductDetails, lastScannedTime]);
 
   const startScanner = useCallback(() => {
     if (isScannerActive || barcode) return;
