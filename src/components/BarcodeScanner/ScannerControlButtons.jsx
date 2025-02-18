@@ -5,10 +5,11 @@ import { RefreshCw } from 'lucide-react';
 const ScannerControlButtons = ({ onReset }) => (
   <Button 
     onClick={onReset} 
-    className="w-full flex items-center justify-center gap-2"
+    className="w-full flex items-center justify-center gap-2 transition-colors hover:bg-opacity-90"
     aria-label="Reset scanner to scan another barcode"
+    type="button"
   >
-    <RefreshCw className="w-4 h-4" aria-hidden="true" />
+    <RefreshCw className="w-4 h-4 animate-spin-hover" aria-hidden="true" />
     <span>Scan Another Barcode</span>
   </Button>
 );

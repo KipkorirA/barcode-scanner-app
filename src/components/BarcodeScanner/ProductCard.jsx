@@ -7,20 +7,22 @@ const ProductCard = ({ product }) => (
       <CardTitle className="text-blue-800">Product Details</CardTitle>
     </CardHeader>
     <CardContent className="space-y-2">
-      {Object.entries(product).map(([key, value]) =>
-        value ? (
+      {Object.entries(product)
+        .filter(([, value]) => value)
+        .map(([key, value]) => (
           <div key={key} className="flex justify-between border-b border-blue-100 pb-2">
-            <span className="font-medium text-blue-700">{key.replace(/_/g, ' ')}:</span>
+            <span className="font-medium text-blue-700">
+              {key.replace(/_/g, ' ').charAt(0).toUpperCase() + key.replace(/_/g, ' ').slice(1)}:
+            </span>
             <span className="text-right text-blue-600">{value}</span>
           </div>
-        ) : null
-      )}
+        ))}
     </CardContent>
   </Card>
 );
 
 ProductCard.propTypes = {
-  product: PropTypes.object.isRequired,
+  product: PropTypes.shape({}).isRequired,
 };
 
 export default ProductCard;

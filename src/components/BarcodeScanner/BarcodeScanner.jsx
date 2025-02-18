@@ -223,26 +223,33 @@ const BarcodeScanner = () => {
           startScanner={startScanner}
           resetScanner={resetScanner}
         />
-        <button onClick={pauseScanner} className="bg-red-500 text-white px-4 py-2 rounded">
-          Pause Scanner
-        </button>
+        {isScannerActive && (
+          <button 
+            onClick={pauseScanner} 
+            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
+          >
+            Pause Scanner
+          </button>
+        )}
       </div>
 
       {barcode && (
-        <Alert className="border-2 border-blue-200">
-          <AlertDescription className="font-medium">Scanned Barcode: {barcode}</AlertDescription>
+        <Alert className="border-2 border-blue-200 shadow-sm">
+          <AlertDescription className="font-medium text-blue-800">
+            Scanned Barcode: {barcode}
+          </AlertDescription>
         </Alert>
       )}
 
       {error && (
-        <Alert variant="destructive" className="border-2 border-red-200 animate-pulse">
-          <AlertDescription className="font-medium">{error}</AlertDescription>
+        <Alert variant="destructive" className="border-2 border-red-200 animate-pulse shadow-sm">
+          <AlertDescription className="font-medium text-red-800">{error}</AlertDescription>
         </Alert>
       )}
 
       {barcode && productDetails && <ProductCard product={productDetails} />}
 
-      <div id="reader" className="w-full"></div>
+      <div id="reader" className="w-full rounded-lg overflow-hidden"></div>
     </div>
   );
 };
